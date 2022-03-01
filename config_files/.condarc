@@ -1,0 +1,10 @@
+envs_dirs:
+  - /sc/arion/work/$USER/conda/envs
+
+pkgs_dirs:
+  - /sc/arion/work/$USER/conda/pkgs
+
+channels:
+  - defaults
+  - bioconda
+  - conda-forge
