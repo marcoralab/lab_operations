@@ -22,13 +22,16 @@ while read GID GROUP; do
   fi
 done < <(printf "$groupinfo")
 
-sudo echo sc >> /etc/synthetic.conf
-sudo echo hpc >> /etc/synthetic.conf
+if [ ! -f /etc/synthetic.conf ] && grep -q "sc" /etc/synthetic.conf; then
+  sudo echo sc >> /etc/synthetic.conf
+  sudo echo hpc >> /etc/synthetic.conf
+fi
+
 sudo chmod 644 /etc/synthetic.conf
 
 mkdir -p $HOME/local/scripts
 
-cat > $HOME/local/scripts/mc <<EOL
+[[ -f $HOME/local/scripts/mc ]] || cat > $HOME/local/scripts/mc <<EOL
 #!/usr/bin/env bash
 cd
 
@@ -42,7 +45,7 @@ cd -
 EOL
 
 
-cat > $HOME/local/scripts/mu <<EOL
+[[ -f $HOME/local/scripts/mu ]] || cat > $HOME/local/scripts/mu <<EOL
 #!/usr/bin/env bash
 mount | grep -q /sc && diskutil unmount force /sc
 mount | grep -q /hpc && diskutil unmount force /hpc
@@ -55,4 +58,12 @@ chmod +x $HOME/local/scripts/mu
 if ! which mc > /dev/null; then
   echo 'export PATH=$HOME/local/scripts:$PATH' >> $HOME/.zshrc
 fi
+
+# shea is a pain
+# I bet he's not going to read this script
+
+echo finished configuring for SSHFS
+echo please make sure SSHFS is installed and then restart
+
+#done
 
