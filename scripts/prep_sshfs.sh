@@ -1,4 +1,7 @@
+#!/usr/bin/env bash
+
 # get groups and group IDs from Minerva
+echo "Getting groups from Minerva; enter Minerva password and token if prompted"
 groupinfo=$(ssh minerva 'id $USER' | \
   tr " " "\n" | \
   grep groups | \
@@ -6,10 +9,11 @@ groupinfo=$(ssh minerva 'id $USER' | \
   tr "," "\n")"\n"
 
 # print to terminal
-echo attempting to add the following groups:
+echo Attempting to add the following groups:
 cat <(printf "$groupinfo")
 
 # add to computer if they don't already exist
+echo "Adding Minerva groups; enter local password if prompted"
 while read GID GROUP; do
   if dscl . list /Groups | grep -q '^name: '"$GROUP"'$'; then
     echo "warning: group \"$GROUP\" already exists; not adding!"
@@ -22,13 +26,16 @@ while read GID GROUP; do
   fi
 done < <(printf "$groupinfo")
 
-if [ ! -f /etc/synthetic.conf ] && grep -q "sc" /etc/synthetic.conf; then
-  sudo echo sc >> /etc/synthetic.conf
-  sudo echo hpc >> /etc/synthetic.conf
-fi
+mkdir -p $HOME/mounts/sc && mkdir -p $HOME/mounts/sc && chmod -R 777 $HOME/mounts
 
+if [ ! -f /etc/synthetic.conf ] || ! grep -q "sc" /etc/synthetic.conf; then
+  echo "Initializing Minerva directories; enter local password if prompted"
+  sudo bash -c "echo sc\t$HOME/mounts/sc >> /etc/synthetic.conf"
+  sudo bash -c "echo hpc\t$HOME/mounts/hpc >> /etc/synthetic.conf"
+fi
 sudo chmod 644 /etc/synthetic.conf
 
+echo Adding SSHFS scripts if absent
 mkdir -p $HOME/local/scripts
 
 [[ -f $HOME/local/scripts/mc ]] || cat > $HOME/local/scripts/mc <<EOL
@@ -44,7 +51,6 @@ sshfs -o noappledouble -o volname=minerva_hpc -o follow_symlinks minerva:/hpc /h
 cd -
 EOL
 
-
 [[ -f $HOME/local/scripts/mu ]] || cat > $HOME/local/scripts/mu <<EOL
 #!/usr/bin/env bash
 mount | grep -q /sc && diskutil unmount force /sc
@@ -59,11 +65,5 @@ if ! which mc > /dev/null; then
   echo 'export PATH=$HOME/local/scripts:$PATH' >> $HOME/.zshrc
 fi
 
-# shea is a pain
-# I bet he's not going to read this script
-
-echo finished configuring for SSHFS
-echo please make sure SSHFS is installed and then restart
-
-#done
+echo Done. Please make sure SSHFS is installed and then restart
 
