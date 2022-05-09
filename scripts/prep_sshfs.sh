@@ -31,7 +31,7 @@ mkdir -p $HOME/mounts/sc && mkdir -p $HOME/mounts/hpc && chmod -R 777 $HOME/moun
 if [ ! -f /etc/synthetic.conf ] || ! grep -q "sc" /etc/synthetic.conf; then
   echo "Initializing Minerva directories; enter local password if prompted"
   sudo bash -c "echo -e \"sc\t$HOME/mounts/sc\" >> /etc/synthetic.conf"
-  sudo bash -c "echo -e hpc\t$HOME/mounts/hpc\" >> /etc/synthetic.conf"
+  sudo bash -c "echo -e \"hpc\t$HOME/mounts/hpc\" >> /etc/synthetic.conf"
 fi
 sudo chmod 644 /etc/synthetic.conf
 
