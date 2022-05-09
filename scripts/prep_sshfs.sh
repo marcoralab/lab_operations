@@ -26,12 +26,12 @@ while read GID GROUP; do
   fi
 done < <(printf "$groupinfo")
 
-mkdir -p $HOME/mounts/sc && mkdir -p $HOME/mounts/sc && chmod -R 777 $HOME/mounts
+mkdir -p $HOME/mounts/sc && mkdir -p $HOME/mounts/hpc && chmod -R 777 $HOME/mounts
 
 if [ ! -f /etc/synthetic.conf ] || ! grep -q "sc" /etc/synthetic.conf; then
   echo "Initializing Minerva directories; enter local password if prompted"
-  sudo bash -c "echo sc\t$HOME/mounts/sc >> /etc/synthetic.conf"
-  sudo bash -c "echo hpc\t$HOME/mounts/hpc >> /etc/synthetic.conf"
+  sudo bash -c "echo -e \"sc\t$HOME/mounts/sc\" >> /etc/synthetic.conf"
+  sudo bash -c "echo -e hpc\t$HOME/mounts/hpc\" >> /etc/synthetic.conf"
 fi
 sudo chmod 644 /etc/synthetic.conf
 
