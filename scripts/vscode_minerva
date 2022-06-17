@@ -1,0 +1,438 @@
+#!/bin/bash
+
+###############################################################################
+#                                                                             #
+#  Script to run on a local computer to start a code-server on Minerva and    #
+#  connect it with a local browser to it                                      #
+#                                                                             #
+#  Minerva author : Brian Fulton-Howard                                       #
+#  Main author    : Samuel Fux                                                #
+#  Contributions  : Andreas Lugmayr, Mike Boss                                #
+#  Date           : October 2021                                              #
+#  Location       : ETH Zurich                                                #
+#  Version        : 0.2                                                       #
+#  Change history :                                                           #
+#                                                                             #
+#                                                                             #
+#  16.06.2022    Adapt for minerva and add autorestart support                #
+#  19.05.2022    JOBID is now saved to reconnect_info file                    #
+#  28.10.2021    Initial version of the script based on Jupyter script        #
+#                                                                             #
+###############################################################################
+
+###############################################################################
+# Configuration options, initalising variables and setting default values     #
+###############################################################################
+
+# Version
+VSC_VERSION="0.2"
+
+# Script directory
+VSC_SCRIPTDIR=$(pwd)
+
+# hostname of the cluster to connect to
+if grep -q "Host minerva" $HOME/.ssh/config; then
+  VSC_HOSTNAME="minerva"
+elif grep -q "Host chimera" $HOME/.ssh/config; then
+  VSC_HOSTNAME="chimera"
+fi
+
+# Queue to use
+VSC_QUEUE="premium"
+
+# LSF Account
+VSC_ACCT="acc_LOAD"
+
+
+# order for initializing configuration options
+# 1. Defaults values set inside this script
+# 2. Command line options overwrite defaults
+# 3. Config file options  overwrite command line options
+
+# Configuration file default    : $HOME/.vsc_config
+VSC_CONFIG_FILE="$HOME/.vsc_config"
+
+# Number of CPU cores default   : 4 CPU cores
+VSC_NUM_CPU=4
+
+# Runtime limit default         : 12:00 hour
+VSC_RUN_TIME="12:00"
+
+# Memory default                : 4000 MB per core
+VSC_MEM_PER_CPU_CORE=4000
+
+# Waiting interval default      : 30 seconds
+VSC_WAITING_INTERVAL=30
+
+###############################################################################
+# Usage instructions                                                          #
+###############################################################################
+
+function display_help {
+cat <<-EOF
+$0: Script to start a VSCode on Minerva from a local computer
+
+Usage: start_vscode.sh [options]
+
+Options:
+
+        -P | --project        acc_SOMETHING    LSF project name
+
+Optional arguments:
+
+        -n | --numcores       4                Number of CPU cores to be used on the cluster
+        -q | --queue          premium          queue to be used on the cluster
+        -W | --runtime        12               Run time limit for the code-server in hours and minutes HH:MM
+        -m | --memory         4000             Memory limit in MB per core
+        -c | --config         ~/.vsc_config    Configuration file for specifying options
+        -h | --help                            Display help for this script and quit
+        -i | --interval       30               Time interval (sec) for checking if the job on the cluster already started
+        -v | --version                         Display version of the script and exit
+
+Examples:
+
+        ./start_vscode.sh -n 4 -W 04:00 -m 2048
+
+        ./start_vscode.sh --numcores 2 --runtime 01:30 --memory 2048
+
+        ./start_vscode.sh -c $HOME/.vsc_config
+
+Format of configuration file:
+
+VSC_NUM_CPU=1               # Number of CPU cores to be used on the cluster
+VSC_RUN_TIME="01:00"        # Run time limit for the code-server in hours and minutes HH:MM
+VSC_MEM_PER_CPU_CORE=1024   # Memory limit in MB per core
+VSC_WAITING_INTERVAL=60     # Time interval to check if the job on the cluster already started
+
+EOF
+exit 1
+}
+
+###############################################################################
+# Parse configuration options                                                 #
+###############################################################################
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+    display_help
+    ;;
+    -v|--version)
+    echo -e "start_vscode.sh version: $VSC_VERSION\n"
+    exit
+    ;;
+    -n|--numcores)
+    VSC_NUM_CPU=$2
+    shift; shift
+    ;;
+    -q|--queue)
+    VSC_QUEUE=$2
+    shift; shift
+    ;;
+    -P|--project)
+    VSC_ACCT=$2
+    shift; shift
+    ;;
+    -W|--runtime)
+    VSC_RUN_TIME=$2
+    shift; shift
+    ;;
+    -m|--memory)
+    VSC_MEM_PER_CPU_CORE=$2
+    shift; shift
+    ;;
+    -c|--config)
+    VSC_CONFIG_FILE=$2
+    shift; shift
+    ;;
+    -i|--interval)
+    VSC_WAITING_INTERVAL=$2
+    shift; shift
+    ;;
+    *)
+    echo -e "Warning: ignoring unknown option $1 \n"
+    shift
+    ;;
+  esac
+done
+
+###############################################################################
+# Check key configuration options                                                 #
+###############################################################################
+
+# check if user has a configuration file and source it to initialize options
+if [ -f "$VSC_CONFIG_FILE" ]; then
+  echo -e "Found configuration file $VSC_CONFIG_FILE"
+  echo -e "Initializing configuration from file ${VSC_CONFIG_FILE}:"
+  cat "$VSC_CONFIG_FILE"
+  source "$VSC_CONFIG_FILE"
+fi
+
+###############################################################################
+# Check for leftover files                                                    #
+###############################################################################
+
+# check if some old files are left from a previous session and delete them
+
+VSC_REMOTE_SHELL=$(ssh $VSC_HOSTNAME 'echo "$SHELL"' | grep -Eo '[^/]+$')
+
+VSC_USERNAME=$(ssh $VSC_HOSTNAME 'echo "$USER"')
+
+# check for reconnect_info in the current directory on the local computer
+
+macos_open () {
+  if nativefier --quiet -n "VSCode_minerva" $1 .minerva_vscode_app 2> /dev/null ; then
+    echo "Opening in native mode"
+    open -n "$HOME/.minerva_vscode_app/VSCode_minerva-darwin-x64/VSCode_minerva.app"
+  elif open -n -a 'Google Chrome' --args "--app=$1" 2> /dev/null ; then
+    echo "Opened in Chromeless Google Chrome"
+  else
+    echo "Opening in default browser"
+    open "$1"
+  fi
+}
+
+if [ -f $VSC_SCRIPTDIR/reconnect_info ]; then
+  VSC_RCI=$VSC_SCRIPTDIR/reconnect_info
+  RC_BJOB=$(sed -nE 's/^BJOB[a-zA-Z ]+: (.+)/\1/p' $VSC_RCI)
+  VSC_CHECKJOB="bjobs | grep -q $RC_BJOB && echo running || echo done"
+  RC_JOBSTATE=$(ssh $VSC_HOSTNAME $VSC_CHECKJOB)
+  if [[ $RC_JOBSTATE == "running" ]]; then
+    token=$(ssh $VSC_HOSTNAME 'awk '\''$1 ~ "pass" {print $2}'\'' ~/.config/code-server/config.yaml')
+    echo
+    cat $VSC_RCI
+    echo -e "Remote token      : $token"
+    echo
+    RC_SSH=$(sed -nE 's/^SSH[a-zA-Z ]+: (.+)/\1/p' $VSC_RCI)
+    RC_URL=$(sed -nE 's/^URL[a-zA-Z ]+: (.+)/\1/p' $VSC_RCI)
+    RC_PRT=$(sed -nE 's/^Local[a-zA-Z ]+: (.+)/\1/p' $VSC_RCI)
+
+    echo -e "Starting browser and connecting it to the code-server"
+    echo -e "Connecting to url $RC_URL"
+
+    # start local browser if possible
+    if [[ "$OSTYPE" == "linux-gnu" ]]; then
+      lsof -i :$RC_PRT > /dev/null || $RC_SSH
+      xdg-open $RC_URL
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+      lsof -i :$RC_PRT > /dev/null || $RC_SSH
+      macos_open $RC_URL
+    elif [[ "$OSTYPE" == "msys" ]]; then # Git Bash on Windows 10
+      lsof -i :$RC_PRT > /dev/null || $RC_SSH # Don't know if this works
+      start $RC_URL
+    else
+      echo -e "Your operating system does not allow to start the browser automatically."
+      echo -e "Please open $RC_URL in your browser."
+      echo -e "check if port $RC_PRT is forwarded first."
+    fi
+    exit 0
+  else
+    echo -e "Found old reconnect_info file, deleting it ..."
+    rm $VSC_SCRIPTDIR/reconnect_info
+  fi
+fi
+
+
+echo -e "Checking for left over files from previous sessions"
+# check for log files from a previous session in the home directory of the cluster
+
+if [[ $VSC_REMOTE_SHELL == "fish" ]]; then
+  ssh -T $VSC_HOSTNAME <<ENDSSH
+if test -f /hpc/users/$VSC_USERNAME/vscip
+  echo -e "Found old vscip file, deleting it ..."
+  rm /hpc/users/$VSC_USERNAME/vscip
+end
+if test -f /hpc/users/$VSC_USERNAME/.vscode.lsf
+  echo -e "Found old job file, deleting it ..."
+  rm /hpc/users/$VSC_USERNAME/.vscode.lsf
+end
+ENDSSH
+else
+  ssh -T $VSC_HOSTNAME <<ENDSSH
+if [ -f /hpc/users/$VSC_USERNAME/vscip ]; then
+  echo -e "Found old vscip file, deleting it ..."
+  rm /hpc/users/$VSC_USERNAME/vscip
+fi
+if [ -f /hpc/users/$VSC_USERNAME/.vscode.lsf ]; then
+  echo -e "Found old job file, deleting it ..."
+  rm /hpc/users/$VSC_USERNAME/.vscode.lsf
+fi
+ENDSSH
+fi
+
+###############################################################################
+# Check configuration options                                                 #
+###############################################################################
+
+# check number of CPU cores
+
+# check if VSC_NUM_CPU an integer
+if ! [[ "$VSC_NUM_CPU" =~ ^[0-9]+$ ]]; then
+  echo -e "Error: $VSC_NUM_CPU -> Incorrect format. Please specify number of CPU cores as an integer and try again\n"
+  display_help
+fi
+
+# check if VSC_NUM_CPU is <= 48
+if [ "$VSC_NUM_CPU" -gt "48" ]; then
+  echo -e "Error: $VSC_NUM_CPU -> Larger than 48. No distributed memory supported, therefore the number of CPU cores needs to be smaller or equal to 128\n"
+  display_help
+fi
+
+if [ "$VSC_NUM_CPU" -gt "0" ]; then
+  echo -e "Requesting $VSC_NUM_CPU CPU cores for running the code-server"
+fi
+
+# check if VSC_RUN_TIME is provided in HH:MM format
+if ! [[ "$VSC_RUN_TIME" =~ ^[0-9][0-9]:[0-9][0-9]$ ]]; then
+  echo -e "Error: $VSC_RUN_TIME -> Incorrect format. Please specify runtime limit in the format HH:MM and try again\n"
+  display_help
+else
+  echo -e "Run time limit set to $VSC_RUN_TIME"
+fi
+
+# check if VSC_MEM_PER_CPU_CORE is an integer
+if ! [[ "$VSC_MEM_PER_CPU_CORE" =~ ^[0-9]+$ ]]; then
+  echo -e "Error: $VSC_MEM_PER_CPU_CORE -> Memory limit must be an integer, please try again\n"
+  display_help
+else
+  echo -e "Memory per core set to $VSC_MEM_PER_CPU_CORE MB"
+fi
+
+# check if VSC_WAITING_INTERVAL is an integer
+if ! [[ "$VSC_WAITING_INTERVAL" =~ ^[0-9]+$ ]]; then
+  echo -e "Error: $VSC_WAITING_INTERVAL -> Waiting time interval [seconds] must be an integer, please try again\n"
+  display_help
+else
+  echo -e "Setting waiting time interval for checking the start of the job to $VSC_WAITING_INTERVAL seconds"
+fi
+
+# check if project is usable
+if ! ssh $VSC_HOSTNAME mybalance | grep -q "$VSC_ACCT"; then
+  echo -e "Error: You must specify a valid LSF project, please try again\n"
+  display_help
+fi
+
+###############################################################################
+# Start code-server on the cluster                                            #
+###############################################################################
+
+ssh $VSC_HOSTNAME "cat > .vscode.lsf" <<<cat <<EOF
+#!/usr/bin/env bash
+#BSUB -J vscode
+#BSUB -P $VSC_ACCT
+#BSUB -q $VSC_QUEUE
+#BSUB -n $VSC_NUM_CPU
+#BSUB -R span[hosts=1]
+#BSUB -W $VSC_RUN_TIME
+#BSUB -R rusage[mem=$VSC_MEM_PER_CPU_CORE]
+#BSUB -o %J.stdout
+#BSUB -eo %J.stderr
+#BSUB -L /bin/bash
+
+export http_proxy=http://172.28.7.1:3128
+export https_proxy=http://172.28.7.1:3128
+export all_proxy=http://172.28.7.1:3128
+export no_proxy=localhost,*.chimera.hpc.mssm.edu,172.28.0.0/16
+export XDG_RUNTIME_DIR="\$HOME/vsc_runtime"
+VSC_IP_REMOTE="\$(hostname -i)"
+echo "Remote IP:\$VSC_IP_REMOTE" >> /hpc/users/$VSC_USERNAME/vscip
+code-server --bind-addr=\${VSC_IP_REMOTE}:8899
+EOF
+
+
+# run the code-server job on Euler and save the ip of the compute node in the file vscip in the home directory of the user on Euler
+echo -e "Connecting to $VSC_HOSTNAME to start the code-server in a batch job"
+VSC_BJOB_OUT=$(ssh $VSC_HOSTNAME 'bsub < .vscode.lsf')
+
+VSC_BJOB_ID=$(echo $VSC_BJOB_OUT | awk '/is submitted/{print substr($2, 2, length($2)-2);}')
+
+# wait until batch job has started, poll every $VSC_WAITING_INTERVAL seconds to check if /cluster/home/$VSC_USERNAME/vscip exists
+# once the file exists and is not empty the batch job has started
+if [[ $VSC_REMOTE_SHELL == "fish" ]]; then
+ssh $VSC_HOSTNAME <<ENDSSH
+while ! [ -e /hpc/users/$VSC_USERNAME/vscip -a -s /hpc/users/$VSC_USERNAME/vscip ]
+  echo 'Waiting for code-server to start, sleep for $VSC_WAITING_INTERVAL sec'
+  sleep $VSC_WAITING_INTERVAL
+end
+ENDSSH
+else
+ssh $VSC_HOSTNAME <<ENDSSH
+while ! [ -e /hpc/users/$VSC_USERNAME/vscip -a -s /hpc/users/$VSC_USERNAME/vscip ]; do
+  echo 'Waiting for code-server to start, sleep for $VSC_WAITING_INTERVAL sec'
+  sleep $VSC_WAITING_INTERVAL
+done
+ENDSSH
+fi
+
+# give the code-server a few seconds to start
+sleep 7
+
+# get remote ip, port and token from files stored on Minerva
+echo -e "Receiving ip, port and token from the code-server"
+VSC_REMOTE_IP=$(ssh $VSC_HOSTNAME "cat /hpc/users/$VSC_USERNAME/vscip | grep -m1 'Remote IP' | cut -d ':' -f 2")
+VSC_REMOTE_PORT=8899
+
+# check if the IP, the port and the token are defined
+if  [[ "$VSC_REMOTE_IP" == "" ]]; then
+cat <<EOF
+Error: remote ip is not defined. Terminating script.
+* Please check login to the cluster and check with bjobs if the batch job on the cluster is running and terminate it with bkill.
+EOF
+exit 1
+fi
+
+token=$(ssh $VSC_HOSTNAME 'awk '\''$1 ~ "pass" {print $2}'\'' ~/.config/code-server/config.yaml')
+
+# print information about IP, port and token
+echo
+echo -e "Remote IP address: $VSC_REMOTE_IP"
+echo -e "Remote port: $VSC_REMOTE_PORT"
+echo -e "Remote token: $token"
+echo
+
+# get a free port on local computer
+echo -e "Determining free port on local computer"
+#VSC_LOCAL_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')
+# FIXME: check if there is a solution that does not require python (as some Windows computers don't have a usable Python installed by default)
+# if python is not available, one could use
+VSC_LOCAL_PORT=$((3 * 2**14 + RANDOM % 2**14))
+# as a replacement. No guarantee that the port is unused, but so far best non-Python solution
+
+echo -e "Using local port: $VSC_LOCAL_PORT"
+
+# write reconnect_info file
+cat <<EOF > $VSC_SCRIPTDIR/reconnect_info
+Restart file
+Remote IP address : $VSC_REMOTE_IP
+Remote port       : $VSC_REMOTE_PORT
+Local port        : $VSC_LOCAL_PORT
+SSH tunnel        : ssh $VSC_HOSTNAME -L $VSC_LOCAL_PORT:$VSC_REMOTE_IP:$VSC_REMOTE_PORT -N &
+URL               : http://localhost:$VSC_LOCAL_PORT
+BJOB ID           : $VSC_BJOB_ID
+EOF
+
+# setup SSH tunnel from local computer to compute node via login node
+# FIXME: check if the tunnel can be managed via this script (opening, closing) by using a control socket from SSH
+echo -e "Setting up SSH tunnel for connecting the browser to the code-server"
+ssh $VSC_HOSTNAME -L $VSC_LOCAL_PORT:$VSC_REMOTE_IP:$VSC_REMOTE_PORT -N &
+
+# SSH tunnel is started in the background, pause 5 seconds to make sure
+# it is established before starting the browser
+sleep 5
+
+# save url in variable
+VSC_URL=http://localhost:$VSC_LOCAL_PORT
+echo -e "Starting browser and connecting it to the code-server"
+echo -e "Connecting to url $VSC_URL"
+
+# start local browser if possible
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+  xdg-open $VSC_URL
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  macos_open $VSC_URL
+elif [[ "$OSTYPE" == "msys" ]]; then # Git Bash on Windows 10
+  start $VSC_URL
+else
+  echo -e "Your operating system does not allow to start the browser automatically."
+  echo -e "Please open $VSC_URL in your browser."
+fi
