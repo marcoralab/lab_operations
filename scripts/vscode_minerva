@@ -10,10 +10,11 @@
 #  Contributions  : Andreas Lugmayr, Mike Boss                                #
 #  Date           : October 2021                                              #
 #  Location       : ETH Zurich                                                #
-#  Version        : 0.2.2                                                     #
+#  Version        : 0.3                                                       #
 #  Change history :                                                           #
 #                                                                             #
 #                                                                             #
+#  22.06.2022    Allow simultaneous sessions and specifying folder            #
 #  22.06.2022    Automatic multiplexing and check for code-server             #
 #  22.06.2022    Allow and validate longer walltimes                          #
 #  16.06.2022    Adapt for minerva and add autorestart support                #
@@ -30,7 +31,8 @@
 VSC_VERSION="0.2.2"
 
 # Script directory
-VSC_SCRIPTDIR=$(pwd)
+# old VSC_SCRIPTDIR=$(pwd)
+VSC_SCRIPTDIR=$HOME
 
 # hostname of the cluster to connect to
 if grep -q "Host minerva" $HOME/.ssh/config; then
@@ -45,6 +47,8 @@ VSC_QUEUE="premium"
 # LSF Account
 VSC_ACCT="acc_LOAD"
 
+# Custom job session name
+VSC_SESSION=""
 
 # order for initializing configuration options
 # 1. Defaults values set inside this script
@@ -97,6 +101,8 @@ Optional arguments:
                                       Will default to "minerva", then "chimera".
                                       server name from .ssh/config, or e.g.
                                       user@minerva.hpc.mssm.edu
+  -S | --session                     Session name to run multiple code servers
+  -f | --folder                      Folder to open in VSCode
 
 Examples:
 
@@ -170,6 +176,14 @@ while [[ $# -gt 0 ]]; do
     VSC_WAITING_INTERVAL=$2
     shift; shift
     ;;
+    -S|--session)
+    VSC_SESSION="_$2"
+    shift; shift
+    ;;
+    -f|--folder)
+    VSC_FOLDER="$2"
+    shift; shift
+    ;;
     *)
     echo -e "Warning: ignoring unknown option $1 \n"
     shift
@@ -225,7 +239,8 @@ VSC_USERNAME=$(ssh $VSC_HOSTNAME 'echo "$USER"')
 macos_open () {
   if nativefier --quiet -n "VSCode_minerva" $1 .minerva_vscode_app 2> /dev/null ; then
     echo "Opening in native mode"
-    open -n "$HOME/.minerva_vscode_app/VSCode_minerva-darwin-x64/VSCode_minerva.app"
+    sleep 2
+    open -n "$HOME/.minerva_vscode_app/VSCode_minerva$VSC_SESSION-darwin-x64/VSCode_minerva$VSC_SESSION.app"
   elif open -n -a 'Google Chrome' --args "--app=$1" 2> /dev/null ; then
     echo "Opened in Chromeless Google Chrome"
   else
@@ -234,8 +249,8 @@ macos_open () {
   fi
 }
 
-if [ -f $VSC_SCRIPTDIR/reconnect_info ]; then
-  VSC_RCI=$VSC_SCRIPTDIR/reconnect_info
+if [ -f $VSC_SCRIPTDIR/.reconnect_info$VSC_SESSION ]; then
+  VSC_RCI=$VSC_SCRIPTDIR/.reconnect_info$VSC_SESSION
   RC_BJOB=$(sed -nE 's/^BJOB[a-zA-Z ]+: (.+)/\1/p' $VSC_RCI)
   VSC_CHECKJOB="bjobs | grep -q $RC_BJOB && echo running || echo done"
   RC_JOBSTATE=$(ssh $VSC_HOSTNAME $VSC_CHECKJOB)
@@ -270,7 +285,7 @@ if [ -f $VSC_SCRIPTDIR/reconnect_info ]; then
     exit 0
   else
     echo -e "Found old reconnect_info file, deleting it ..."
-    rm $VSC_SCRIPTDIR/reconnect_info
+    rm $VSC_SCRIPTDIR/.reconnect_info$VSC_SESSION
   fi
 fi
 
@@ -280,24 +295,24 @@ echo -e "Checking for left over files from previous sessions"
 
 if [[ $VSC_REMOTE_SHELL == "fish" ]]; then
   ssh -T $VSC_HOSTNAME <<ENDSSH
-if test -f /hpc/users/$VSC_USERNAME/vscip
+if test -f /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
   echo -e "Found old vscip file, deleting it ..."
-  rm /hpc/users/$VSC_USERNAME/vscip
+  rm /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
 end
-if test -f /hpc/users/$VSC_USERNAME/.vscode.lsf
+if test -f /hpc/users/$VSC_USERNAME/.vscode$VSC_SESSION.lsf
   echo -e "Found old job file, deleting it ..."
-  rm /hpc/users/$VSC_USERNAME/.vscode.lsf
+  rm /hpc/users/$VSC_USERNAME/.vscode$VSC_SESSION.lsf
 end
 ENDSSH
 else
   ssh -T $VSC_HOSTNAME <<ENDSSH
-if [ -f /hpc/users/$VSC_USERNAME/vscip ]; then
+if [ -f /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION ]; then
   echo -e "Found old vscip file, deleting it ..."
-  rm /hpc/users/$VSC_USERNAME/vscip
+  rm /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
 fi
-if [ -f /hpc/users/$VSC_USERNAME/.vscode.lsf ]; then
+if [ -f /hpc/users/$VSC_USERNAME/.vscode$VSC_SESSION.lsf ]; then
   echo -e "Found old job file, deleting it ..."
-  rm /hpc/users/$VSC_USERNAME/.vscode.lsf
+  rm /hpc/users/$VSC_USERNAME/.vscode$VSC_SESSION.lsf
 fi
 ENDSSH
 fi
@@ -367,9 +382,9 @@ fi
 # Start code-server on the cluster                                            #
 ###############################################################################
 
-ssh $VSC_HOSTNAME "cat > .vscode.lsf" <<<cat <<EOF
+ssh $VSC_HOSTNAME "cat > .vscode$VSC_SESSION.lsf" <<<cat <<EOF
 #!/usr/bin/env bash
-#BSUB -J vscode
+#BSUB -J vscode$VSC_SESSION
 #BSUB -P $VSC_ACCT
 #BSUB -q $VSC_QUEUE
 #BSUB -n $VSC_NUM_CPU
@@ -386,14 +401,14 @@ export all_proxy=http://172.28.7.1:3128
 export no_proxy=localhost,*.chimera.hpc.mssm.edu,172.28.0.0/16
 export XDG_RUNTIME_DIR="\$HOME/vsc_runtime"
 VSC_IP_REMOTE="\$(hostname -i)"
-echo "Remote IP:\$VSC_IP_REMOTE" >> /hpc/users/$VSC_USERNAME/vscip
-code-server --bind-addr=\${VSC_IP_REMOTE}:8899
+echo "Remote IP:\$VSC_IP_REMOTE" >> /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
+code-server --bind-addr=\${VSC_IP_REMOTE}:8899 $VSC_FOLDER
 EOF
 
 
 # run the code-server job on Euler and save the ip of the compute node in the file vscip in the home directory of the user on Euler
 echo -e "Connecting to $VSC_HOSTNAME to start the code-server in a batch job"
-VSC_BJOB_OUT=$(ssh $VSC_HOSTNAME 'bsub < .vscode.lsf')
+VSC_BJOB_OUT=$(ssh $VSC_HOSTNAME "bsub < .vscode$VSC_SESSION.lsf")
 
 VSC_BJOB_ID=$(echo $VSC_BJOB_OUT | awk '/is submitted/{print substr($2, 2, length($2)-2);}')
 
@@ -401,14 +416,14 @@ VSC_BJOB_ID=$(echo $VSC_BJOB_OUT | awk '/is submitted/{print substr($2, 2, lengt
 # once the file exists and is not empty the batch job has started
 if [[ $VSC_REMOTE_SHELL == "fish" ]]; then
 ssh $VSC_HOSTNAME <<ENDSSH
-while ! [ -e /hpc/users/$VSC_USERNAME/vscip -a -s /hpc/users/$VSC_USERNAME/vscip ]
+while ! [ -e /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION -a -s /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION ]
   echo 'Waiting for code-server to start, sleep for $VSC_WAITING_INTERVAL sec'
   sleep $VSC_WAITING_INTERVAL
 end
 ENDSSH
 else
 ssh $VSC_HOSTNAME <<ENDSSH
-while ! [ -e /hpc/users/$VSC_USERNAME/vscip -a -s /hpc/users/$VSC_USERNAME/vscip ]; do
+while ! [ -e /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION -a -s /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION ]; do
   echo 'Waiting for code-server to start, sleep for $VSC_WAITING_INTERVAL sec'
   sleep $VSC_WAITING_INTERVAL
 done
@@ -420,7 +435,7 @@ sleep 7
 
 # get remote ip, port and token from files stored on Minerva
 echo -e "Receiving ip, port and token from the code-server"
-VSC_REMOTE_IP=$(ssh $VSC_HOSTNAME "cat /hpc/users/$VSC_USERNAME/vscip | grep -m1 'Remote IP' | cut -d ':' -f 2")
+VSC_REMOTE_IP=$(ssh $VSC_HOSTNAME "cat /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION | grep -m1 'Remote IP' | cut -d ':' -f 2")
 VSC_REMOTE_PORT=8899
 
 # check if the IP, the port and the token are defined
@@ -452,7 +467,7 @@ VSC_LOCAL_PORT=$((3 * 2**14 + RANDOM % 2**14))
 echo -e "Using local port: $VSC_LOCAL_PORT"
 
 # write reconnect_info file
-cat <<EOF > $VSC_SCRIPTDIR/reconnect_info
+cat <<EOF > $VSC_SCRIPTDIR/.reconnect_info$VSC_SESSION
 Restart file
 Remote IP address : $VSC_REMOTE_IP
 Remote port       : $VSC_REMOTE_PORT
