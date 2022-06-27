@@ -35,9 +35,9 @@ VSC_VERSION="0.2.2"
 VSC_SCRIPTDIR=$HOME
 
 # hostname of the cluster to connect to
-if grep -q "Host minerva" $HOME/.ssh/config; then
+if grep -q "Host minerva" $HOME/.ssh/config &> /dev/null; then
   VSC_HOSTNAME="minerva"
-elif grep -q "Host chimera" $HOME/.ssh/config; then
+elif grep -q "Host chimera" $HOME/.ssh/config &> /dev/null; then
   VSC_HOSTNAME="chimera"
 fi
 
@@ -204,13 +204,13 @@ if [ -f "$VSC_CONFIG_FILE" ]; then
 fi
 
 if ! [ -f $HOME/.ssh/config ] || \
-   ! grep -q "ControlPath" $HOME/.ssh/config; then
+   ! grep -q "ControlPath" $HOME/.ssh/config &> /dev/null; then
   echo -e "You should enable ControlMaster in your .ssh/config.\n"
   echo -e "See https://en.wikibooks.org/wiki/OpenSSH/Cookbook/Multiplexing\n"
   if ! [ -d $HOME/.ssh/cm_socket ]; then
     mkdir -p $HOME/.ssh/cm_socket
   fi
-  ssh -M -S ~/.ssh/cm_socket/%r@%h:%p $VSC_HOSTNAME echo
+  ssh -M -S ~/.ssh/cm_socket/%r@%h:%p -o "ControlPersist=10m" $VSC_HOSTNAME echo -e "Logged in as \$USER\n"
   VSC_HOSTNAME="-S ~/.ssh/cm_socket/%r@%h:%p $VSC_HOSTNAME"
 fi
 
@@ -237,7 +237,7 @@ VSC_USERNAME=$(ssh $VSC_HOSTNAME 'echo "$USER"')
 # check for reconnect_info in the current directory on the local computer
 
 macos_open () {
-  if nativefier --quiet -n "VSCode_minerva" $1 .minerva_vscode_app 2> /dev/null ; then
+  if nativefier --quiet -n "VSCode_minerva$VSC_SESSION" $1 .minerva_vscode_app 2> /dev/null ; then
     echo "Opening in native mode"
     sleep 2
     open -n "$HOME/.minerva_vscode_app/VSCode_minerva$VSC_SESSION-darwin-x64/VSCode_minerva$VSC_SESSION.app"
@@ -461,7 +461,12 @@ echo -e "Determining free port on local computer"
 #VSC_LOCAL_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')
 # FIXME: check if there is a solution that does not require python (as some Windows computers don't have a usable Python installed by default)
 # if python is not available, one could use
-VSC_LOCAL_PORT=$((3 * 2**14 + RANDOM % 2**14))
+
+if lsof -i :8899; then
+  VSC_LOCAL_PORT=$((3 * 2**14 + RANDOM % 2**14))
+else
+  VSC_LOCAL_PORT=8899
+fi
 # as a replacement. No guarantee that the port is unused, but so far best non-Python solution
 
 echo -e "Using local port: $VSC_LOCAL_PORT"
