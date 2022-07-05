@@ -10,9 +10,10 @@
 #  Contributions  : Andreas Lugmayr, Mike Boss                                #
 #  Date           : October 2021                                              #
 #  Location       : ETH Zurich                                                #
-#  Version        : 0.4                                                       #
+#  Version        : 0.4.1                                                     #
 #  Change history :                                                           #
 #                                                                             #
+#  04.07.2022    Locks have potential fix but are disabled for now            #
 #  30.06.2022    Locks and free ports on remote, improved native              #
 #                remote storage of reconnect info, improved messages          #
 #  22.06.2022    Allow simultaneous sessions and specifying folder            #
@@ -29,7 +30,7 @@
 ###############################################################################
 
 # Version
-VSC_VERSION="0.4"
+VSC_VERSION="0.4.1"
 
 # Script directory
 # old VSC_SCRIPTDIR=$(pwd)
@@ -464,19 +465,20 @@ export XDG_RUNTIME_DIR="\$HOME/vsc_runtime"
 VSC_IP_REMOTE="\$(hostname -i)"
 echo "Remote IP:\$VSC_IP_REMOTE" >> /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
 
-
-lf=/tmp/vscode-session
-if [[ -f \$lf ]]; then
-	owner=\$(stat -c "%U" \$lf)
-	if [[ \$USER != \$owner ]]; then
-    echo "FAIL" > /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
-    echo "HOSTNAME:\$HOSTNAME" >> /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
-    echo "OWNER:\$owner" >> /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
-    exit 1
-  fi
-else
-  touch \$lf
-fi
+# Lockfiles disabled for now
+# lf=/tmp/vscode-session/
+# mkdir -p \$lf
+# if ! find \$lf -type f ! -mtime +7 ! -iname "\$USER" -exec false {} + ; then
+# 	owner=\$(stat -c "%U" \$lf)
+# 	if [[ \$USER != \$owner ]]; then
+#     echo "FAIL" > /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
+#     echo "HOSTNAME:\$HOSTNAME" >> /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
+#     echo "OWNER:\$owner" >> /hpc/users/$VSC_USERNAME/vscip$VSC_SESSION
+#     exit 1
+#   fi
+# else
+#   touch \$lf/\$USER
+# fi
 
 
 local_used_ports=\$(netstat -4 -ltn | grep LISTEN | awk '{ print \$4 }' | awk -F":" '{ print \$2 }' )
