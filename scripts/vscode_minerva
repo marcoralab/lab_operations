@@ -3,16 +3,17 @@
 ###############################################################################
 #                                                                             #
 #  Script to run on a local computer to start a code-server on Minerva and    #
-#  connect it with a local browser to it                                      #
+#  connect to it with a local browser                                         #
 #                                                                             #
 #  Minerva author : Brian Fulton-Howard                                       #
 #  Main author    : Samuel Fux                                                #
 #  Contributions  : Andreas Lugmayr, Mike Boss                                #
 #  Date           : October 2021                                              #
 #  Location       : ETH Zurich                                                #
-#  Version        : 0.4.1                                                     #
+#  Version        : 0.4.2                                                     #
 #  Change history :                                                           #
 #                                                                             #
+#  07.07.2022    fix browser opening on Mac and support WSL                   #
 #  04.07.2022    Locks have potential fix but are disabled for now            #
 #  30.06.2022    Locks and free ports on remote, improved native              #
 #                remote storage of reconnect info, improved messages          #
@@ -30,7 +31,7 @@
 ###############################################################################
 
 # Version
-VSC_VERSION="0.4.1"
+VSC_VERSION="0.4.2"
 
 # Script directory
 # old VSC_SCRIPTDIR=$(pwd)
@@ -281,11 +282,11 @@ macos_open () {
     echo "Opening in native mode"
     sleep 2
     open -n $native_app
-  elif open -n -a 'Google Chrome' --args "--app=$1" 2> /dev/null ; then
+  elif open -n -a 'Google Chrome' --args "--app=http://localhost:$1" 2> /dev/null ; then
     echo "Opened in Chromeless Google Chrome"
   else
     echo "Opening in default browser"
-    open "$1"
+    open "http://localhost:$1"
   fi
 }
 
@@ -312,7 +313,16 @@ if [ -f $VSC_SCRIPTDIR/.reconnect_info$VSC_SESSION ]; then
     # start local browser if possible
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
       lsof -i :$RC_PRT > /dev/null || $RC_SSH
-      xdg-open $RC_URL
+      if which wlslview 2>1 > /dev/null; then
+        wslview $VSC_URL # USING Windows Subsystem for Linux
+      elif ! [ -z ${WSLENV+x} ]; then
+        echo -e "Your are using Windows Subsystem for Linux, but wslu is not "
+        echo -e "available.\n"
+        echo -e "Install wslu for automatic browser opening.\n"
+        echo -e "Please open $RC_URL in your browser."
+      else
+        xdg-open $RC_URL
+      fi
     elif [[ "$OSTYPE" == "darwin"* ]]; then
       lsof -i :$RC_PRT > /dev/null || $RC_SSH
       macos_open $RC_PRT
@@ -320,7 +330,7 @@ if [ -f $VSC_SCRIPTDIR/.reconnect_info$VSC_SESSION ]; then
       lsof -i :$RC_PRT > /dev/null || $RC_SSH # Don't know if this works
       start $RC_URL
     else
-      echo -e "Your operating system does not allow to start the browser automatically."
+      echo -e "Your OS does not allow starting browsers automatically."
       echo -e "Please open $RC_URL in your browser."
       echo -e "check if port $RC_PRT is forwarded first."
     fi
@@ -626,12 +636,21 @@ echo -e "Connecting to url $VSC_URL"
 
 # start local browser if possible
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-  xdg-open $VSC_URL
+  if which wlslview 2>1 > /dev/null; then
+    wslview $VSC_URL # USING Windows Subsystem for Linux
+  elif ! [ -z ${WSLENV+x} ]; then
+    echo -e "Your are using Windows Subsystem for Linux, but wslu is not "
+    echo -e "available.\n"
+    echo -e "Install wslu for automatic browser opening.\n"
+    echo -e "Please open $VSC_URL in your browser."
+  else
+    xdg-open $VSC_URL
+  fi
 elif [[ "$OSTYPE" == "darwin"* ]]; then
   macos_open $VSC_LOCAL_PORT
 elif [[ "$OSTYPE" == "msys" ]]; then # Git Bash on Windows 10
   start $VSC_URL
 else
-  echo -e "Your operating system does not allow to start the browser automatically."
+  echo -e "Your OS does not allow starting browsers automatically."
   echo -e "Please open $VSC_URL in your browser."
 fi
