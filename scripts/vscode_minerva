@@ -10,9 +10,11 @@
 #  Contributions  : Andreas Lugmayr, Mike Boss                                #
 #  Date           : October 2021                                              #
 #  Location       : ETH Zurich                                                #
-#  Version        : 0.4.2                                                     #
+#  Version        : 0.4.3                                                     #
 #  Change history :                                                           #
 #                                                                             #
+#  07.07.2022    fix launching outside of home directory and                  #
+#                more robust token grabbing                                   #
 #  07.07.2022    fix browser opening on Mac and support WSL                   #
 #  04.07.2022    Locks have potential fix but are disabled for now            #
 #  30.06.2022    Locks and free ports on remote, improved native              #
@@ -31,7 +33,7 @@
 ###############################################################################
 
 # Version
-VSC_VERSION="0.4.2"
+VSC_VERSION="0.4.3"
 
 # Script directory
 # old VSC_SCRIPTDIR=$(pwd)
@@ -215,7 +217,7 @@ fi
 get_hostinfo() {
     awk -v hrx="[Hh][Oo][Ss][Tt][[:space:]]+$1[[:space:]]*$" \
    '$0 ~ "[Hh]ost[[:space:]]" {a = 0} $0 ~ hrx {a = 1; next} a == 1 {print}' \
-   .ssh/config | sed -E 's/^[[:blank:]]*|[[:blank:]]*$//g'
+   $HOME/.ssh/config | sed -E 's/^[[:blank:]]*|[[:blank:]]*$//g'
 }
 
 if [ -z ${VSC_HOSTNAME+x} ]; then
@@ -573,7 +575,12 @@ EOF
 exit 1
 fi
 
-token=$(ssh $VSC_HOSTNAME 'awk '\''$1 ~ "pass" {print $2}'\'' ~/.config/code-server/config.yaml')
+get_token () {
+  ssh $VSC_HOSTNAME 'cat ~/.config/code-server/config.yaml' | \
+    awk '$1 ~ "pass" {print $2}'
+}
+
+token=$(get_token)
 
 # print information about IP, port and token
 echo
