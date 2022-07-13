@@ -80,7 +80,7 @@ else
     mamba install -y python=$pyversion $lcl_pkgs
   fi
 
-  if [[ $newconda -eq 0]]; then
+  if [[ $newconda -eq 0 ]]; then
     if ! mamba --help &> /dev/null; then
       conda install -y mamba
     fi
