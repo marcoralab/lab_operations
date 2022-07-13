@@ -26,9 +26,10 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   if ! conda --help &> /dev/null; then
     export newconda=1
     conda_prefix="/sc/arion/work/$USER/conda/miniconda3"
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-    bash Miniconda3-latest-Linux-x86_64.sh -bp $conda_prefix
-    rm Miniconda3-latest-Linux-x86_64.sh
+    conda_inst=Miniconda3-latest-Linux-x86_64.sh
+    wget -O $conda_inst https://repo.anaconda.com/miniconda/$conda_inst
+    bash $conda_inst -bp $conda_prefix
+    rm $conda_inst
     $conda_prefix/bin/conda init $shelltype
     if [[ $SHELLCONF == "other" ]]; then
       echo "Unknown shell. Please rerun this script to continue."
@@ -72,7 +73,7 @@ else
     else
       conda_inst="Miniconda3-latest-Linux-x86_64.sh"
     fi
-    wget https://repo.anaconda.com/miniconda/$conda_inst
+    wget -O $conda_inst https://repo.anaconda.com/miniconda/$conda_inst
     bash $conda_inst -b
     rm $conda_inst
     $HOME/miniconda3/bin/conda init $shelltype
