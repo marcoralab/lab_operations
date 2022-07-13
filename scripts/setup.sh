@@ -4,15 +4,16 @@ set -euo pipefail # STRICT MODE
 pyversion="3.10"
 
 shelltype=$(basename $SHELL)
+echo "Using $shelltype"
+
 if [[ "$shelltype" == "fish" ]]; then
-  SHELLCONF=$HOME/.config/fish/config.fish
-  shelltype=
+  export SHELLCONF=$HOME/.config/fish/config.fish
 elif [[ "$shelltype" == "bash" ]]; then
-  SHELLCONF=$HOME/.bash_profile
+  export SHELLCONF=$HOME/.bash_profile
 elif [[ "$shelltype" == "zsh" ]]; then
-  SHELLCONF=$HOME/.zshrc
+  export SHELLCONF=$HOME/.zshrc
 else
-  SHELLCONF="other"
+  export SHELLCONF="other"
 fi
 
 if echo $HOME | grep -q "^/hpc/users/"; then
@@ -32,8 +33,12 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     if [[ $SHELLCONF == "other" ]]; then
       echo "Unknown shell. Please rerun this script to continue."
       exit 1
+    elif [[ $SHELLCONF == "bash" ]]; then
+      source $SHELLCONF
+    else
+      $HOME/miniconda3/bin/conda init bash
+      source $HOME/.bash_profile
     fi
-    source $SHELLCONF
   else
     conda deactivate
   fi
@@ -71,11 +76,16 @@ else
     bash $conda_inst -b
     rm $conda_inst
     $HOME/miniconda3/bin/conda init $shelltype
-    if ! [[ $SHELLCONF == "other" ]]; then
+    if [[ $SHELLCONF == "other" ]]; then
       echo "Unknown shell. Please rerun this script to continue."
       exit 1
+    elif [[ $SHELLCONF == "bash" ]]; then
+      source $SHELLCONF
+    else
+      $HOME/miniconda3/bin/conda init bash
+      source $HOME/.bash_profile
     fi
-    source $SHELLCONF
+    
     conda install -y mamba
     mamba install -y python=$pyversion $lcl_pkgs
   fi
@@ -89,7 +99,7 @@ else
     mamba update -y $lcl_pkgs
   fi
 
-  mamba activate
+  mamba init
 fi
 
 export SETUP_SCRIPT=1
