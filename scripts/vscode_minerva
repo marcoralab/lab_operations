@@ -610,13 +610,15 @@ fi
 
 echo -e "Using local port: $VSC_LOCAL_PORT"
 
+VSC_FWDCMD="ssh $VSC_HOSTNAME -L $VSC_LOCAL_PORT:$VSC_REMOTE_IP:$VSC_REMOTE_PORT -fNT"
+
 # write reconnect_info file
 cat <<EOF > $VSC_SCRIPTDIR/.reconnect_info$VSC_SESSION
 Restart file
 Remote IP address : $VSC_REMOTE_IP
 Remote port       : $VSC_REMOTE_PORT
 Local port        : $VSC_LOCAL_PORT
-SSH tunnel        : ssh $VSC_HOSTNAME -L $VSC_LOCAL_PORT:$VSC_REMOTE_IP:$VSC_REMOTE_PORT -N &
+SSH tunnel        : $VSC_FWDCMD
 URL               : http://localhost:$VSC_LOCAL_PORT
 BJOB ID           : $VSC_BJOB_ID
 EOF
@@ -624,7 +626,7 @@ EOF
 # setup SSH tunnel from local computer to compute node via login node
 # FIXME: check if the tunnel can be managed via this script (opening, closing) by using a control socket from SSH
 echo -e "Setting up SSH tunnel for connecting the browser to the code-server"
-ssh $VSC_HOSTNAME -L $VSC_LOCAL_PORT:$VSC_REMOTE_IP:$VSC_REMOTE_PORT -N &
+$VSC_FWDCMD
 
 # SSH tunnel is started in the background, pause 5 seconds to make sure
 # it is established before starting the browser
