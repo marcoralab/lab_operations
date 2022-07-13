@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail # STRICT MODE
+pyversion="3.10"
 
 shelltype=$(basename $SHELL)
 if [[ "$shelltype" == "fish" ]]; then
@@ -45,14 +46,15 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   
   mamba init
 
-  if conda env list | grep -qE "^py3.10\s+"; then
-    mamba create -y -n py3.10 python=3.10 snakemake ipython ipdb jupyterlab \
-      biopython visidata miller flippyr mamba gh git code-server vim radian \
-      pygit2 powerline-status r-base=4.1 r-essentials r-languageserver
+  if conda env list | grep -qE "^py$pyversion\s+"; then
+    mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
+      jupyterlab biopython visidata miller flippyr mamba gh git code-server \
+      vim radian pygit2 powerline-status \
+      r-base=4.1 r-essentials r-languageserver
   fi
   
-  printf "\n\n conda activate py3.10\n" >> $SHELLCONF
-  mamba activate py3.10
+  printf "\n\n conda activate py$pyversion\n" >> $SHELLCONF
+  mamba activate py$pyversion
 else
   lcl_pkgs="snakemake ipython ipdb jupyterlab biopython \
     visidata miller flippyr pygit2 powerline-status"
@@ -75,7 +77,7 @@ else
     fi
     source $SHELLCONF
     conda install -y mamba
-    mamba install -y python=3.10 $lcl_pkgs
+    mamba install -y python=$pyversion $lcl_pkgs
   fi
 
   if [[ $newconda -eq 0]]; then
