@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import profile
 from cookiecutter.main import cookiecutter
 from cookiecutter.generate import OutputDirExistsException
