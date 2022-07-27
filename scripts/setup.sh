@@ -18,7 +18,7 @@ fi
 
 if echo $HOME | grep -q "^/hpc/users/"; then
   curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/.condarc > $HOME/.condarc
-  echo -e "\n\nconda config --set auto_activate_base false\n" >> $HOME/.condarc
+  echo -e "\nauto_activate_base: false\n" >> $HOME/.condarc
   mkdir -p /sc/arion/work/$USER/conda/envs
   mkdir -p /sc/arion/work/$USER/conda/pkgs
   
