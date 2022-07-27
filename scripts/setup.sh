@@ -34,9 +34,18 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     if [[ $SHELLCONF == "other" ]]; then
       echo "Unknown shell. Please rerun this script to continue."
       exit 1
-    elif [[ $SHELLCONF == "bash" ]]; then
-      export PS1=''
-      source $SHELLCONF
+    elif [[ $shelltype == "bash" ]]; then
+      __conda_setup=$("$conda_prefix/bin/conda" 'shell.bash' 'hook' 2> /dev/null)
+      if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
+      else
+        if [ -f "$conda_prefix/etc/profile.d/conda.sh" ]; then
+          . "$conda_prefix/etc/profile.d/conda.sh"
+        else
+          export PATH="$conda_prefix/bin:$PATH"
+        fi
+      fi
+      unset __conda_setup
     else
       $conda_prefix/bin/conda init bash
       export PS1=''
