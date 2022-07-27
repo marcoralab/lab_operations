@@ -35,11 +35,11 @@ if echo $HOME | grep -q "^/hpc/users/"; then
       echo "Unknown shell. Please rerun this script to continue."
       exit 1
     elif [[ $SHELLCONF == "bash" ]]; then
-      export PS1='[\u@\h \W]\$'
+      export PS1=''
       source $SHELLCONF
     else
       $conda_prefix/bin/conda init bash
-      export PS1='[\u@\h \W]\$'
+      export PS1=''
       source $HOME/.bash_profile
     fi
   else
