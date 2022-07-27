@@ -65,15 +65,15 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   
   mamba init
 
-  if conda env list | grep -qE "^py$pyversion\s+"; then
+  if conda env list | grep -qvE "^py$pyversion\s+"; then
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
       jupyterlab biopython visidata miller flippyr mamba gh git code-server \
-      vim radian pygit2 powerline-status \
+      vim radian pygit2 powerline-status click cookiecutter \
       r-base=4.1 r-essentials r-languageserver
   fi
   
   printf "\n\n conda activate py$pyversion\n" >> $SHELLCONF
-  mamba activate py$pyversion
+  conda activate py$pyversion
 else
   lcl_pkgs="snakemake ipython ipdb jupyterlab biopython \
     visidata miller flippyr pygit2 powerline-status"
