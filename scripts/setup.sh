@@ -60,7 +60,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   if ! mamba --help &> /dev/null; then
     conda install -y mamba
   elif [[ $newconda -eq 0 ]]; then
-    mamba update mamba
+    mamba update -y mamba
   fi
   
   mamba init
