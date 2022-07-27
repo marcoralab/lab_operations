@@ -37,7 +37,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     elif [[ $SHELLCONF == "bash" ]]; then
       source $SHELLCONF
     else
-      $HOME/miniconda3/bin/conda init bash
+      $conda_prefix/bin/conda init bash
       source $HOME/.bash_profile
     fi
   else
