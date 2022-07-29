@@ -18,7 +18,7 @@ fi
 
 if echo $HOME | grep -q "^/hpc/users/"; then
   curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/.condarc > $HOME/.condarc
-  echo -e "\n\nconda config --set auto_activate_base false\n" >> $HOME/.condarc
+  echo -e "\nauto_activate_base: false\n" >> $HOME/.condarc
   mkdir -p /sc/arion/work/$USER/conda/envs
   mkdir -p /sc/arion/work/$USER/conda/pkgs
   
@@ -34,10 +34,21 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     if [[ $SHELLCONF == "other" ]]; then
       echo "Unknown shell. Please rerun this script to continue."
       exit 1
-    elif [[ $SHELLCONF == "bash" ]]; then
-      source $SHELLCONF
+    elif [[ $shelltype == "bash" ]]; then
+      __conda_setup=$("$conda_prefix/bin/conda" 'shell.bash' 'hook' 2> /dev/null)
+      if [ $? -eq 0 ]; then
+        eval "$__conda_setup"
+      else
+        if [ -f "$conda_prefix/etc/profile.d/conda.sh" ]; then
+          . "$conda_prefix/etc/profile.d/conda.sh"
+        else
+          export PATH="$conda_prefix/bin:$PATH"
+        fi
+      fi
+      unset __conda_setup
     else
-      $HOME/miniconda3/bin/conda init bash
+      $conda_prefix/bin/conda init bash
+      export PS1=''
       source $HOME/.bash_profile
     fi
   else
@@ -47,20 +58,20 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   if ! mamba --help &> /dev/null; then
     conda install -y mamba
   elif [[ $newconda -eq 0 ]]; then
-    mamba update mamba
+    mamba update -y mamba
   fi
   
   mamba init
 
-  if conda env list | grep -qE "^py$pyversion\s+"; then
+  if conda env list | grep -qvE "^py$pyversion\s+"; then
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
       jupyterlab biopython visidata miller flippyr mamba gh git code-server \
-      vim radian pygit2 powerline-status \
+      vim radian pygit2 powerline-status click cookiecutter \
       r-base=4.1 r-essentials r-languageserver
   fi
   
   printf "\n\n conda activate py$pyversion\n" >> $SHELLCONF
-  mamba activate py$pyversion
+  conda activate py$pyversion
 else
   lcl_pkgs="snakemake ipython ipdb jupyterlab biopython \
     visidata miller flippyr pygit2 powerline-status"
