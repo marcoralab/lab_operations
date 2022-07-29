@@ -93,6 +93,7 @@ if __name__ == '__main__':
         proj = click.prompt('Minerva Project:', default='acc_LOAD')
         tf_default = click.confirm('Use all defaults?',
                                    default=True)
+        tf_overwrite = False
         if tf_default and os.path.isdir(os.path.join(confdir, 'lsf')):
             print('lsf profile already exists.')
             if click.confirm('Overwrite LSF profile?', default=True):
