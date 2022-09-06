@@ -106,11 +106,11 @@ if __name__ == '__main__':
     except ModuleNotFoundError:
         print('Python package \'click\' is missing.')
         yn = input('Quit to install click for the best experience? [y/N]:')
-        if yn[0].lower == 'y':
+        if yn[0].lower() == 'y':
             import sys
             sys.exit(1)
         yn = input('Use all defaults (acc_LOAD only) [Y/n]:')
-        tf_default = yn[0].lower == 'y' or not yn
+        tf_default = yn[0].lower() == 'y' or not yn
         if tf_default:
             proj = 'acc_LOAD'
         tf_overwrite = False
