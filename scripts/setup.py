@@ -184,8 +184,8 @@ Host *
         with open(configpath,"w") as f:
             f.writelines(ssh_config)
     os.chmod(configpath, 0o644)
-    print('making ssh keys...')
-    make_keys(home)
+    #print('making ssh keys...')
+    #make_keys(home)
 
     f_scpt = [f for f in pathlib.Path(path_labops + "/scripts/").glob('*')
               if not f.name.startswith("setup")]
