@@ -58,7 +58,7 @@ def make_keys(home, overwrite=False):
         if os.path.isfile(f_rsa):
             os.remove(f_rsa)
         cmd_rsakey = ['ssh-keygen', '-t', 'rsa', '-b', '4096',
-                      '-f', f_rsa, '-N', '""']
+                      '-f', f_rsa, '-N', "''"]
         r = subprocess.run(cmd_rsakey)
         assert r.returncode == 0, 'Error generating RSA key'
     else:
@@ -66,7 +66,7 @@ def make_keys(home, overwrite=False):
     
     if not os.path.isfile(f_elyptic):
         cmd_elyptickey = ['ssh-keygen', '-t', 'ed25519', '-a', '100',
-                          '-f', f_elyptic, '-N', '""']
+                          '-f', f_elyptic, '-N', "''"]
         r = subprocess.run(cmd_elyptickey)
         assert r.returncode == 0, 'Error generating elyptic key'
     else:
