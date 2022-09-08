@@ -58,7 +58,7 @@ def make_keys(home, overwrite=False):
         if os.path.isfile(f_rsa):
             os.remove(f_rsa)
         cmd_rsakey = ['ssh-keygen', '-t', 'rsa', '-b', '4096',
-                      '-f', f_rsa, '-N', '""']
+                      '-f', f_rsa, '-N', "''"]
         r = subprocess.run(cmd_rsakey)
         assert r.returncode == 0, 'Error generating RSA key'
     else:
@@ -66,7 +66,7 @@ def make_keys(home, overwrite=False):
     
     if not os.path.isfile(f_elyptic):
         cmd_elyptickey = ['ssh-keygen', '-t', 'ed25519', '-a', '100',
-                          '-f', f_elyptic, '-N', '""']
+                          '-f', f_elyptic, '-N', "''"]
         r = subprocess.run(cmd_elyptickey)
         assert r.returncode == 0, 'Error generating elyptic key'
     else:
@@ -184,8 +184,8 @@ Host *
         with open(configpath,"w") as f:
             f.writelines(ssh_config)
     os.chmod(configpath, 0o644)
-    print('making ssh keys...')
-    make_keys(home)
+    #print('making ssh keys...')
+    #make_keys(home)
 
     f_scpt = [f for f in pathlib.Path(path_labops + "/scripts/").glob('*')
               if not f.name.startswith("setup")]
