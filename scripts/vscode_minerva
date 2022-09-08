@@ -10,9 +10,10 @@
 #  Contributions  : Andreas Lugmayr, Mike Boss                                #
 #  Date           : October 2021                                              #
 #  Location       : ETH Zurich                                                #
-#  Version        : 0.5                                                       #
+#  Version        : 0.5.1                                                     #
 #  Change history :                                                           #
 #                                                                             #
+#  07.09.2022    Refinements from rstudio integration                         #
 #  07.09.2022    Allow resource specification,                                #
 #                generalize for integration of rstudio,                       #
 #                automatically use first project unless specified,            #
@@ -37,7 +38,7 @@
 ###############################################################################
 
 # Version
-S_VERSION="0.5"
+S_VERSION="0.5.1"
 
 # Script directory
 # old RS_SCRIPTDIR=$(pwd)
@@ -108,7 +109,7 @@ echowarn () {
 
 function display_help {
 cat <<-EOF
-$0: Script to start a VSCode on Minerva from a local computer
+$0: Script to start a VSCode server on Minerva from a local computer
 
 Usage: $(basename "$0") [options]
 
@@ -121,10 +122,10 @@ Optional arguments:
   -n | --numcores   4                Number of CPU cores to be used on
                                       the cluster
   -q | --queue      premium          queue to be used on the cluster
-  -W | --runtime    12               Run time limit for the code-server in hours
+  -W | --runtime    12               Run time limit for the server in hours
                                       and minutes H[H[H]]:MM
   -m | --memory     4000             Memory limit in MB per core
-  -R | --resource                   Extra resource request like "himem"
+  -R | --resource                    Extra resource request like "himem"
   -c | --config     ~/.vsc_config    Configuration file for specifying options
   -h | --help                        Display help for this script and quit
   -i | --interval   30               Time interval (sec) for checking if the job
@@ -134,7 +135,7 @@ Optional arguments:
                                       Will default to "minerva", then "chimera".
                                       server name from .ssh/config, or e.g.
                                       user@minerva.hpc.mssm.edu
-  -S | --session                     Session name to run multiple code servers
+  -S | --session                     Session name to run multiple servers
   -f | --folder                      Folder to open in VSCode
 
 Examples:
@@ -148,13 +149,13 @@ Examples:
 Format of configuration file:
 
 S_NUM_CPU=1               # Number of CPU cores to be used on the cluster
-S_RUN_TIME="01:00"        # Run time limit for the code-server in hours and
+S_RUN_TIME="01:00"        # Run time limit for the server in hours and
                             #   minutes H[H[H]]:MM
 S_MEM_PER_CPU_CORE=1024   # Memory limit in MB per core
 S_WAITING_INTERVAL=60     # Time interval to check if the job on the cluster
                             #   already started
 S_QUEUE="premium"         # LSF queue to be used on the cluster
-S_SESSION=""              # Session name to run multiple code servers
+S_SESSION=""              # Session name to run multiple servers
 S_ACCT="acc_SOMETHING"    # LSF account to be used on the cluster
 S_HOSTNAME="minerva"      # SSH host or username@host for connection
 
@@ -178,7 +179,7 @@ while [[ $# -gt 0 ]]; do
     display_help
     ;;
     -v|--version)
-    echo -e "start_vscode.sh version: $S_VERSION\n"
+    echo -e "vscode_minerva version: $S_VERSION\n"
     exit
     ;;
     -n|--numcores)
@@ -341,7 +342,7 @@ if [ -f $S_RCI ]; then
     RC_URL=$(sed -nE 's/^URL[a-zA-Z ]+: (.+)/\1/p' $S_RCI)
     RC_PRT=$(sed -nE 's/^Local[a-zA-Z ]+: (.+)/\1/p' $S_RCI)
 
-    echoinfo "Starting browser and connecting it to the code-server"
+    echoinfo "Starting browser and connecting it to the server"
     echoinfo "Connecting to url $RC_URL"
 
     # start local browser if possible
@@ -386,7 +387,7 @@ fi
 
 S_FILE_IP="/hpc/users/$S_USERNAME/vscip$S_SESSION"
 if ssh $S_HOSTNAME "test -f $S_FILE_IP"; then
-  echoinfo "Found old vscip file, deleting it ..."
+  echoinfo "Found old IP file, deleting it ..."
   ssh $S_HOSTNAME "rm $S_FILE_IP"
 fi
 
@@ -426,7 +427,7 @@ if [ "$S_NUM_CPU" -gt "48" ]; then
 fi
 
 if [ "$S_NUM_CPU" -gt "0" ]; then
-  echoinfo "Requesting $S_NUM_CPU CPU cores for running the code-server"
+  echoinfo "Requesting $S_NUM_CPU CPU cores for running the server"
 fi
 
 # check if S_RUN_TIME is provided in HH:MM format
@@ -547,26 +548,26 @@ TRY=1
 SUCCESS=0
 
 while ( [ $TRY -lt 4 ] && [ $SUCCESS -eq 0 ] ); do
-  # run the code-server job on Minerva and save the ip of the compute node in the file vscip in the home directory of the user on Euler
+  # run the job on Minerva and save the ip of the compute node in the home directory of the user on Euler
   echo
-  echoinfo "Connecting to $S_HOSTNAME to start the code-server in a batch job"
+  echoinfo "Connecting to $S_HOSTNAME to start the server in a batch job"
   S_BJOB_OUT=$(ssh $S_HOSTNAME "bsub < $S_FILE_JOB")
   S_BJOB_ID=$(echo $S_BJOB_OUT | awk '/is submitted/{print substr($2, 2, length($2)-2);}')
   
-  # wait until batch job has started, poll every $S_WAITING_INTERVAL seconds to check if /cluster/home/$S_USERNAME/vscip exists
+  # wait until batch job has started, poll every $S_WAITING_INTERVAL seconds to check if IP file exists
   # once the file exists and is not empty the batch job has started
   echoinfo "Waiting for job to start\n"
   if [[ $S_REMOTE_SHELL == "fish" ]]; then
   ssh -T $S_HOSTNAME <<ENDSSH
-  while ! [ -e $S_FILE_IP -a -s $S_FILE_IP ];
-    echo 'Waiting for code-server to start, sleep for $S_WAITING_INTERVAL sec'
+  while ! [ -e $S_FILE_IP -a -s $S_FILE_IP ]
+    echo 'Waiting for server to start, sleep for $S_WAITING_INTERVAL sec'
     sleep $S_WAITING_INTERVAL
   end
 ENDSSH
   else
   ssh -T $S_HOSTNAME <<ENDSSH
   while ! [ -e $S_FILE_IP -a -s $S_FILE_IP ]; do
-    echo 'Waiting for code-server to start, sleep for $S_WAITING_INTERVAL sec'
+    echo 'Waiting for server to start, sleep for $S_WAITING_INTERVAL sec'
     sleep $S_WAITING_INTERVAL
   done
 ENDSSH
@@ -574,13 +575,12 @@ ENDSSH
 
   echo
   
-  # give the code-server a few seconds to start
   echoinfo "Giving VSCode a few seconds to start\n"
   sleep 7
   
   # get remote ip, port and token from files stored on Minerva
   if ! ssh $S_HOSTNAME "cat $S_FILE_IP" | grep -q FAIL; then
-    echoinfo "Receiving ip and port from the code-server"
+    echoinfo "Receiving ip and port from the server"
     S_REMOTE_IP=$(ssh $S_HOSTNAME "cat $S_FILE_IP | grep -m1 'Remote IP' | cut -d ':' -f 2")
     S_REMOTE_PORT=$(ssh $S_HOSTNAME "cat $S_FILE_IP | grep -m1 'Remote Port' | cut -d ':' -f 2")
     SUCCESS=1
@@ -659,7 +659,7 @@ BJOB ID           : $S_BJOB_ID
 EOF
 
 # setup SSH tunnel from local computer to compute node via login node
-echoinfo "Setting up SSH tunnel for connecting the browser to the code-server"
+echoinfo "Setting up SSH tunnel for connecting the browser to the server"
 $S_FWDCMD
 
 # SSH tunnel is started in the background, pause 5 seconds to make sure
@@ -673,7 +673,7 @@ fi
 
 # save url in variable
 S_URL=http://localhost:$S_LOCAL_PORT
-echoinfo "Starting browser and connecting it to the code-server"
+echoinfo "Starting browser and connecting it to the server"
 echoinfo "Connecting to url $S_URL"
 
 # start local browser if possible
