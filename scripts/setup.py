@@ -57,17 +57,19 @@ def make_keys(home, overwrite=False):
             and not os.path.isfile(f_elyptic)):
         if os.path.isfile(f_rsa):
             os.remove(f_rsa)
-        cmd_rsakey = ['ssh-keygen', '-t', 'rsa', '-b', '4096',
-                      '-f', f_rsa, '-N', "''"]
-        r = subprocess.run(cmd_rsakey)
+        cmd_rsakey = ('ssh-keygen -t rsa -b 4096 '
+                      f'-f {f_rsa} -P ""')
+        r = subprocess.Popen(cmd_rsakey, shell=True)
+        r.communicate()
         assert r.returncode == 0, 'Error generating RSA key'
     else:
         print('Keys already exist. Skipping RSA ssh-keygen')
     
     if not os.path.isfile(f_elyptic):
-        cmd_elyptickey = ['ssh-keygen', '-t', 'ed25519', '-a', '100',
-                          '-f', f_elyptic, '-N', "''"]
-        r = subprocess.run(cmd_elyptickey)
+        cmd_elyptickey = ('ssh-keygen -t ed25519 -a 100 '
+                          f'-f {f_elyptic} -P ""')
+        r = subprocess.Popen(cmd_elyptickey, shell=True)
+        r.communicate()
         assert r.returncode == 0, 'Error generating elyptic key'
     else:
         print('Keys already exist. Skipping elyptic ssh-keygen')
@@ -184,8 +186,8 @@ Host *
         with open(configpath,"w") as f:
             f.writelines(ssh_config)
     os.chmod(configpath, 0o644)
-    #print('making ssh keys...')
-    #make_keys(home)
+    print('making ssh keys...')
+    make_keys(home)
 
     f_scpt = [f for f in pathlib.Path(path_labops + "/scripts/").glob('*')
               if not f.name.startswith("setup")]

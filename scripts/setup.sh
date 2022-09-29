@@ -27,7 +27,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     export newconda=1
     conda_prefix="/sc/arion/work/$USER/conda/miniconda3"
     conda_inst=Miniconda3-latest-Linux-x86_64.sh
-    wget -O $conda_inst https://repo.anaconda.com/miniconda/$conda_inst
+    curl https://repo.anaconda.com/miniconda/$conda_inst $conda_inst
     bash $conda_inst -bp $conda_prefix
     rm $conda_inst
     $conda_prefix/bin/conda init $shelltype
@@ -84,7 +84,7 @@ else
     else
       conda_inst="Miniconda3-latest-Linux-x86_64.sh"
     fi
-    wget -O $conda_inst https://repo.anaconda.com/miniconda/$conda_inst
+    curl https://repo.anaconda.com/miniconda/$conda_inst > $conda_inst
     bash $conda_inst -b
     rm $conda_inst
     $HOME/miniconda3/bin/conda init $shelltype
@@ -115,7 +115,7 @@ else
 fi
 
 export SETUP_SCRIPT=1
-wget https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.py
+curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.py > setup.py
 python3 setup.py
 rm setup.py
 
