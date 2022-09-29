@@ -5,14 +5,17 @@
 #  Script to run on a local computer to start a code-server on Minerva and    #
 #  connect to it with a local browser                                         #
 #                                                                             #
-#  Minerva author : Brian Fulton-Howard                                       #
-#  Main author    : Samuel Fux                                                #
-#  Contributions  : Andreas Lugmayr, Mike Boss                                #
-#  Date           : October 2021                                              #
-#  Location       : ETH Zurich                                                #
-#  Version        : 0.5.1                                                     #
-#  Change history :                                                           #
+#  Main author     : Brian Fulton-Howard                                      #
+#  Original author : Samuel Fux                                               #
+#  Contributions   : Wei Guo, Gene Fluder, Lili Gai                           #
+#                  : Andreas Lugmayr, Mike Boss                               #
+#  Date            : October 2021                                             #
+#  Location        : Mount Sinai (originally ETH Zurich)                      #
+#  Version         : 0.6.3                                                    #
+#  Change history  :                                                          #
 #                                                                             #
+#  29.09.2022    Further refinements from rstudio;                            #
+#                allow differnt hostnames on different clients                #
 #  07.09.2022    Refinements from rstudio integration                         #
 #  07.09.2022    Allow resource specification,                                #
 #                generalize for integration of rstudio,                       #
@@ -38,7 +41,7 @@
 ###############################################################################
 
 # Version
-S_VERSION="0.5.1"
+S_VERSION="0.6.3"
 
 # Script directory
 # old RS_SCRIPTDIR=$(pwd)
@@ -276,9 +279,6 @@ else
   echo
 fi
 
-S_BASE_RECONNECT=".reconnect_info_vsc$S_SESSION"
-S_FILE_RECONNECT="/hpc/users/$S_USERNAME/$S_BASE_RECONNECT"
-
 # Check if multiplexing is enabled, otherwise warn and compensate
 if ! [ -f $HOME/.ssh/config ] || \
    ! grep -q "ControlPath" $HOME/.ssh/config &> /dev/null; then
@@ -290,19 +290,26 @@ if ! [ -f $HOME/.ssh/config ] || \
   S_MANUAL_MULTIPLEX=true
   ssh -M -S ~/.ssh/cm_socket/%r@%h:%p -o "ControlPersist=10m" $S_HOSTNAME echo -e "Logged in as \$USER\n"
   S_HOSTNAME="-S ~/.ssh/cm_socket/%r@%h:%p $S_HOSTNAME"
-else
-  scp $S_HOSTNAME:$S_FILE_RECONNECT $S_SCRIPTDIR/ &> /dev/null
 fi
 
 ###############################################################################
-# Check for leftover files                                                    #
+# Set up directories and files                                                #
 ###############################################################################
-
-# check if some old files are left from a previous session and delete them
 
 echoinfo "Getting username and shell\n"
 S_REMOTE_SHELL=$(ssh $S_HOSTNAME 'echo "$SHELL"' | grep -Eo '[^/]+$')
 S_USERNAME=$(ssh $S_HOSTNAME 'echo "$USER"')
+
+#RS_WORKDIR="/hpc/users/$S_USERNAME/minerva_jobs/vscode"
+RS_WORKDIR="/hpc/users/$S_USERNAME"
+S_BASE_RECONNECT=".reconnect_info_vsc$S_SESSION"
+S_FILE_RECONNECT="$RS_WORKDIR/$S_BASE_RECONNECT"
+S_FILE_JOB="$RS_WORKDIR/.vscode$S_SESSION.lsf"
+S_FILE_IP="$RS_WORKDIR/vscip$S_SESSION"
+
+###############################################################################
+# Check for leftover files                                                    #
+###############################################################################
 
 # check for reconnect_info in the current directory on the local computer
 
@@ -313,7 +320,8 @@ macos_open () {
     open -n $native_app
   elif which nativefier &> /dev/null; then
     nativefier --quiet -n "VSCode_minerva${S_SESSION}_$1" \
-      http://localhost:$1 .minerva_vscode_app 2> /dev/null
+      --darwin-dark-mode-support --fast-quit --enable-es3-apis \
+      http://localhost:$1 $HOME/.minerva_vscode_app 2> /dev/null
     echoinfo "Opening in native mode"
     sleep 2
     open -n $native_app
@@ -327,6 +335,10 @@ macos_open () {
 
 echoinfo "Checking if reconnection is possible\n"
 
+if [ -z ${S_MANUAL_MULTIPLEX+x} ]; then
+  scp $S_HOSTNAME:$S_FILE_RECONNECT $S_SCRIPTDIR/ &> /dev/null
+fi
+
 S_RCI=$S_SCRIPTDIR/$S_BASE_RECONNECT
 if [ -f $S_RCI ]; then
   RC_BJOB=$(sed -nE 's/^BJOB[a-zA-Z ]+: (.+)/\1/p' $S_RCI)
@@ -338,9 +350,13 @@ if [ -f $S_RCI ]; then
     cat $S_RCI
     echo -e "Remote token      : $token\n\n"
 
-    RC_SSH=$(sed -nE 's/^SSH[a-zA-Z ]+: (.+)/\1/p' $S_RCI)
+    
+    RC_PRT_REMOTE=$(sed -nE 's/^Remote port +: (.+)/\1/p' $S_RCI)
+    RC_IP_REMOTE=$(sed -nE 's/^Remote IP address +: (.+)/\1/p' $S_RCI)
     RC_URL=$(sed -nE 's/^URL[a-zA-Z ]+: (.+)/\1/p' $S_RCI)
     RC_PRT=$(sed -nE 's/^Local[a-zA-Z ]+: (.+)/\1/p' $S_RCI)
+    #RC_SSH=$(sed -nE 's/^SSH[a-zA-Z ]+: (.+)/\1/p' $S_RCI)
+    RC_SSH="ssh $S_HOSTNAME -L $RC_PRT:$RC_IP_REMOTE:$RC_PRT_REMOTE -fNT"
 
     echoinfo "Starting browser and connecting it to the server"
     echoinfo "Connecting to url $RC_URL"
@@ -380,22 +396,26 @@ else
 fi
 
 # check for log files from a previous session in the home directory of the cluster
-if ssh $S_HOSTNAME "test -f $S_FILE_RECONNECT"; then
-  echoinfo "Found old remote session file, deleting it ..."
-  ssh $S_HOSTNAME "rm $S_FILE_RECONNECT"
+info_sessionfile=$(echoinfo "Found old remote session file, deleting it ...")
+info_ipfile=$(echoinfo "Found old IP file, deleting it ...")
+info_jobfile=$(echoinfo "Found old job file, deleting it ...")
+
+ssh $S_HOSTNAME bash <<ENDSSH
+if [[ -f $S_FILE_RECONNECT ]]; then
+  echo $info_sessionfile
+  rm $S_FILE_RECONNECT
 fi
 
-S_FILE_IP="/hpc/users/$S_USERNAME/vscip$S_SESSION"
-if ssh $S_HOSTNAME "test -f $S_FILE_IP"; then
-  echoinfo "Found old IP file, deleting it ..."
-  ssh $S_HOSTNAME "rm $S_FILE_IP"
+if [[ -f $S_FILE_IP ]]; then
+  echo $info_ipfile
+  rm $S_FILE_IP
 fi
 
-S_FILE_JOB=".vscode$S_SESSION.lsf"
-if ssh $S_HOSTNAME "test -f $S_FILE_JOB"; then
-  echoinfo "Found old job file, deleting it ..."
-  ssh $S_HOSTNAME "rm $S_FILE_JOB"
+if [[ -f $S_FILE_JOB ]]; then
+  echo $info_jobfile
+  rm $S_FILE_JOB
 fi
+ENDSSH
 
 echoinfo "Checking for vscode on Minerva\n"
 
@@ -463,6 +483,8 @@ fi
 
 # check if project is usable
 
+echoinfo "Checking LSF project"
+
 if [[ $S_ACCT == "acc_null" ]]; then
   echoinfo "Project is not specified, or is acc_null, using 1st avail project."
   S_ACCT=$(ssh $S_HOSTNAME mybalance | grep acc_ | awk '{ print $2 }' | head -1)
@@ -489,8 +511,8 @@ ssh $S_HOSTNAME "cat > $S_FILE_JOB" <<<cat <<EOF
 #BSUB -R span[hosts=1]
 #BSUB -W $S_RUN_TIME
 #BSUB -R rusage[mem=$S_MEM_PER_CPU_CORE]
-#BSUB -o %J.stdout
-#BSUB -eo %J.stderr
+#BSUB -oo $RS_WORKDIR/vscode_%J.out
+#BSUB -eo $RS_WORKDIR/vscode_%J.err
 #BSUB -L /bin/bash
 EOF
 
@@ -557,21 +579,12 @@ while ( [ $TRY -lt 4 ] && [ $SUCCESS -eq 0 ] ); do
   # wait until batch job has started, poll every $S_WAITING_INTERVAL seconds to check if IP file exists
   # once the file exists and is not empty the batch job has started
   echoinfo "Waiting for job to start\n"
-  if [[ $S_REMOTE_SHELL == "fish" ]]; then
-  ssh -T $S_HOSTNAME <<ENDSSH
-  while ! [ -e $S_FILE_IP -a -s $S_FILE_IP ]
-    echo 'Waiting for server to start, sleep for $S_WAITING_INTERVAL sec'
-    sleep $S_WAITING_INTERVAL
-  end
-ENDSSH
-  else
-  ssh -T $S_HOSTNAME <<ENDSSH
+  ssh -T $S_HOSTNAME bash <<ENDSSH
   while ! [ -e $S_FILE_IP -a -s $S_FILE_IP ]; do
-    echo 'Waiting for server to start, sleep for $S_WAITING_INTERVAL sec'
+    echo 'Waiting for job to start, sleep for $S_WAITING_INTERVAL sec'
     sleep $S_WAITING_INTERVAL
   done
 ENDSSH
-  fi
 
   echo
   
@@ -636,6 +649,13 @@ fi
 
 S_FWDCMD="ssh $S_HOSTNAME -L $S_LOCAL_PORT:$S_REMOTE_IP:$S_REMOTE_PORT -fNT"
 
+# setup SSH tunnel from local computer to compute node via login node
+echoinfo "Setting up SSH tunnel for connecting the browser to the server"
+$S_FWDCMD
+
+# SSH tunnel is started in the background, pause 3 seconds to make sure
+# it is established before starting the browser
+sleep 3
 # print information about IP, ports and token
 echoinfo "Server info:"
 echo
@@ -658,17 +678,9 @@ URL               : http://localhost:$S_LOCAL_PORT
 BJOB ID           : $S_BJOB_ID
 EOF
 
-# setup SSH tunnel from local computer to compute node via login node
-echoinfo "Setting up SSH tunnel for connecting the browser to the server"
-$S_FWDCMD
-
-# SSH tunnel is started in the background, pause 5 seconds to make sure
-# it is established before starting the browser
-sleep 5
-
 # Copy connection information to the remote machine
 if [ -z ${S_MANUAL_MULTIPLEX+x} ]; then
-  scp $S_RCI $S_HOSTNAME:S_FILE_RECONNECT &> /dev/null
+  scp $S_RCI $S_HOSTNAME:$S_FILE_RECONNECT &> /dev/null
 fi
 
 # save url in variable
