@@ -67,7 +67,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
       jupyterlab biopython visidata miller flippyr mamba gh git code-server \
       vim radian pygit2 powerline-status click cookiecutter \
-      r-base=4.1 r-essentials r-languageserver
+      r-base=4.2 r-essentials r-languageserver
   fi
   
   printf "\n\n conda activate py$pyversion\n" >> $SHELLCONF
