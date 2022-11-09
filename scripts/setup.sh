@@ -2,6 +2,7 @@
 
 set -euo pipefail # STRICT MODE
 pyversion="3.10"
+rversion="4.2"
 
 shelltype=$(basename $SHELL)
 echo "Using $shelltype"
@@ -57,6 +58,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
 
   if ! mamba --help &> /dev/null; then
     conda install -y mamba
+    mamba update -y mamba
   elif [[ $newconda -eq 0 ]]; then
     mamba update -y mamba
   fi
@@ -67,7 +69,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
       jupyterlab biopython visidata miller flippyr mamba gh git code-server \
       vim radian pygit2 powerline-status click cookiecutter \
-      r-base=4.2 r-essentials r-languageserver
+      r-base=$rversion r-essentials r-languageserver
   fi
   
   printf "\n\n conda activate py$pyversion\n" >> $SHELLCONF
@@ -99,15 +101,19 @@ else
     fi
     
     conda install -y mamba
+    mamba update -y mamba conda
     mamba install -y python=$pyversion $lcl_pkgs
   fi
 
   if [[ $newconda -eq 0 ]]; then
+    if [ ! -f $HOME/.condarc ]; then
+      curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/local.condarc > $HOME/.condarc
+    fi
     if ! mamba --help &> /dev/null; then
       conda install -y mamba
     fi
-    mamba install -y $lcl_pkgs
     mamba update -y mamba conda
+    mamba install -y $lcl_pkgs
     mamba update -y $lcl_pkgs
   fi
 
