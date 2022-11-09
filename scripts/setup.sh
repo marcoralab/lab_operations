@@ -27,7 +27,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     export newconda=1
     conda_prefix="/sc/arion/work/$USER/conda/miniconda3"
     conda_inst=Miniconda3-latest-Linux-x86_64.sh
-    curl https://repo.anaconda.com/miniconda/$conda_inst $conda_inst
+    curl https://repo.anaconda.com/miniconda/$conda_inst > $conda_inst
     bash $conda_inst -bp $conda_prefix
     rm $conda_inst
     $conda_prefix/bin/conda init $shelltype
