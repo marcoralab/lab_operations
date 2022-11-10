@@ -231,8 +231,15 @@ else:
     mkdir(cachedir)
     mkdir(sdir)
     cachedir_home = nicepath(sdir + ['cache'])
-    if os.path.exists(cachedir_home):
-      shutil.rmtree(cachedir_home)
+    if os.path.islink(cachedir_home):
+        os.remove(cachedir_home)
+    elif os.path.exists(cachedir_home):
+        for root, dirs, files in os.walk(cachedir_home,
+                                         topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
     os.symlink(nicepath(cachedir), cachedir_home)
     
     print('installing LSF profile for snakemake')
