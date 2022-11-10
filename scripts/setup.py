@@ -259,8 +259,9 @@ else:
     tf_overwrite = False
     lsfexists = False
     makelsf = True
+    outpath = os.path.join(confdir, 'lsf')
 
-    if os.path.isdir(os.path.join(confdir, 'lsf')):
+    if os.path.isdir(outpath):
         print('lsf profile already exists.')
         lsfexists = True
         mkprompt = 'Continue without creating new LSF profile?'
