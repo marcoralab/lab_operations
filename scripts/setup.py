@@ -1,5 +1,8 @@
 import os
 import re
+import sys
+import importlib
+import shutil
 import subprocess
 import pygit2
 import pathlib
@@ -227,19 +230,17 @@ else:
     sdir = [home, '.singularity']
     mkdir(cachedir)
     mkdir(sdir)
-    import ipdb; ipdb.set_trace()
     cachedir_home = nicepath(sdir + ['cache'])
     if os.path.exists(cachedir_home):
-      os.remove(cachedir_home)
+      shutil.rmtree(cachedir_home)
     os.symlink(nicepath(cachedir), cachedir_home)
-    link_if_absent(cachedir, 'cache', sdir)
     
     print('installing LSF profile for snakemake')
     # load in profile script as a module
     profscript = nicepath([home, 'local', 'src', 'lab_operations',
                            'scripts', 'setup_snakemake_profiles.py'])
     spec = importlib.util.spec_from_file_location('snakeprofile', profscript)
-    snakeprofile = importlib.util.module_from_spec(spec)
+    sp = importlib.util.module_from_spec(spec)
     sys.modules['snakeprofile'] = sp
     spec.loader.exec_module(sp)
     import click
@@ -249,43 +250,56 @@ else:
     
     profile_name='lsf'
     tf_overwrite = False
+    lsfexists = False
+    makelsf = True
+
     if os.path.isdir(os.path.join(confdir, 'lsf')):
         print('lsf profile already exists.')
+        lsfexists = True
+        mkprompt = 'Continue without creating new LSF profile?'
+        makelsf = not click.confirm(mkprompt, default=True)
+    
+    if makelsf and lsfexists:
         if click.confirm('Overwrite LSF profile?', default=True):
             tf_overwrite = True
         else:
             profile_name = click.prompt('Profile Name:')
     else:
         profile_name='choose_quiet'
-    try:
-        outpath = sp.install_lsf_profile(use_defaults=True,
-                                         project=proj,
-                                         overwrt=tf_overwrite,
-                                         p_name=profile_name)
-    except OutputDirExistsException:
-        print('lsf profile already exists.')
-        if click.confirm('Overwrite LSF profile?', default=True):
-            outpath = sp.install_lsf_profile(use_defaults=tf_default,
-                                             project=proj,
-                                             overwrt=True)
-        else:
-            profile_name = click.prompt('New profile name:')
-            outpath = sp.install_lsf_profile(use_defaults=tf_default,
-                                             project=proj,
-                                             p_name=profile_name)
-    else:
-        raise
 
+    if makelsf:
+        try:
+            outpath = sp.install_lsf_profile(use_defaults=True,
+                                             project=proj,
+                                             overwrt=tf_overwrite,
+                                             p_name=profile_name)
+        except OutputDirExistsException:
+            print('lsf profile already exists.')
+            if click.confirm('Overwrite LSF profile?', default=True):
+                outpath = sp.install_lsf_profile(use_defaults=tf_default,
+                                                 project=proj,
+                                                 overwrt=True)
+            else:
+                profile_name = click.prompt('New profile name:')
+                outpath = sp.install_lsf_profile(use_defaults=tf_default,
+                                                 project=proj,
+                                                 p_name=profile_name)
+        else:
+            raise
+    
             
     try:
         sp.install_local_profile(lsf_profile=outpath, profile_name="local")
     except OutputDirExistsException:
         print('"local" lsf profile already exists.')
-        if click.confirm('Overwrite local LSF profile?', default=True):
+        mkprompt = 'Continue without creating new local profile?'
+        makelocal = not click.confirm(mkprompt, default=True)
+        if makelocal and click.confirm('Overwrite local LSF profile?',
+                                       default=True):
             sp.install_local_profile(lsf_profile=outpath,
                                      profile_name="local",
                                      overwrt=True)
-        else:
+        elif makelocal:
             local_name = click.prompt('New local profile name:')
             sp.install_local_profile(profile_name=local_name)
     else:
