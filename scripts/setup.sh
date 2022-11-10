@@ -17,7 +17,10 @@ else
   export SHELLCONF="other"
 fi
 
+minerva=0
+
 if echo $HOME | grep -q "^/hpc/users/"; then
+  minerva=1
   curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/.condarc > $HOME/.condarc
   echo -e "\nauto_activate_base: false\n" >> $HOME/.condarc
   mkdir -p /sc/arion/work/$USER/conda/envs
@@ -67,9 +70,9 @@ if echo $HOME | grep -q "^/hpc/users/"; then
 
   if conda env list | grep -qvE "^py$pyversion\s+"; then
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
-      jupyterlab biopython visidata miller flippyr mamba gh git code-server \
-      vim radian pygit2 powerline-status click cookiecutter \
-      r-base=$rversion r-essentials r-languageserver
+      jupyterlab biopython visidata miller flippyr mamba gh git vim pygit2 \
+      powerline-status click cookiecutter \
+      r-base=$rversion r-essentials r-languageserver radian
   fi
   
   printf "\n\n conda activate py$pyversion\n" >> $SHELLCONF
@@ -124,5 +127,10 @@ export SETUP_SCRIPT=1
 curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.py > setup.py
 python3 setup.py
 rm setup.py
+
+if [[ $minerva -eq 1 ]]; then
+  curl -fsSL https://code-server.dev/install.sh | \
+    bash -s -- --prefix ~/local --method standalone
+fi
 
 echo "Run \"source $SHELLCONF\" to activate changes."
