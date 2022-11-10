@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import pygit2
 import pathlib
@@ -105,6 +106,7 @@ os_type = get_os_type()
 shell = os.path.basename(os.environ['SHELL'])
 
 home = os.environ['HOME']
+isminerva = bool(re.search("hpc", home))
 
 assert 'SETUP_SCRIPT' in os.environ.keys(), 'Run setup.sh instead!'
 assert os.environ['SETUP_SCRIPT'] == '1', 'Run setup.sh instead!'
@@ -144,6 +146,9 @@ if len(discrep_conf) > 0:
             print(f'         {realpath}\n')
 
 scriptdir = nicepath([home, 'local', 'scripts'])
+bindir = nicepath([home, 'local', 'bin'])
+scriptdir_team = nicepath(['/sc/arion/projects/load', 'scripts'])
+
 if not scriptdir in os.environ['PATH'].split(':'):
     if shell == 'fish':
         shell_conf = nicepath([home, '.config', 'fish', 'config.fish'])
@@ -157,8 +162,14 @@ if not scriptdir in os.environ['PATH'].split(':'):
     with open(shell_conf, "a") as f:
         if shell == 'fish':
             f.write(f'\nfish_add_path -g "{scriptdir}"\n')
+            f.write(f'\nfish_add_path -g "{bindir}"\n')
+            if isminerva:
+                f.write(f'\nfish_add_path -g "{scriptdir_team}"\n')
         else:
             f.write(f'\nexport PATH="{scriptdir}:$PATH"\n')
+            f.write(f'\nexport PATH="{bindir}:$PATH"\n')
+            if isminerva:
+                f.write(f'\nexport PATH="{scriptdir_team}:$PATH"\n')
 
 mkdir([home, '.ssh'], mode=0o700)
 
