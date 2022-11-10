@@ -281,7 +281,7 @@ else:
                                              project=proj,
                                              overwrt=tf_overwrite,
                                              p_name=profile_name)
-        except OutputDirExistsException:
+        except sp.OutputDirExistsException:
             print('lsf profile already exists.')
             if click.confirm('Overwrite LSF profile?', default=True):
                 outpath = sp.install_lsf_profile(use_defaults=tf_default,
@@ -298,7 +298,7 @@ else:
             
     try:
         sp.install_local_profile(lsf_profile=outpath, profile_name="local")
-    except OutputDirExistsException:
+    except sp.OutputDirExistsException:
         print('"local" lsf profile already exists.')
         mkprompt = 'Continue without creating new local profile?'
         makelocal = not click.confirm(mkprompt, default=True)
