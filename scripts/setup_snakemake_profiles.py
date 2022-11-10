@@ -36,7 +36,7 @@ def install_lsf_profile(use_defaults=False, project='acc_LOAD',
     return outpath
 
 def install_local_profile(lsf_profile={}, use_defaults='if_no_lsf',
-                          settings={}, profile_name='local', overwrite=False):
+                          settings={}, profile_name='local', overwrt=False):
     confdir = os.path.expanduser('~/.config/snakemake')
 
     defaults = {'latency-wait': '10',
@@ -75,8 +75,8 @@ def install_local_profile(lsf_profile={}, use_defaults='if_no_lsf',
     assert os.path.sep not in profile_name, 'profile name should not be a path'
     outdir = os.path.join(confdir, profile_name)
     if os.path.exists(outdir):
-        if not overwrite:
-            raise RuntimeError('profile path already exists')
+        if not overwrt:
+            raise OutputDirExistsException
     else:
         os.mkdir(outdir)
 
