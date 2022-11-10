@@ -273,8 +273,8 @@ else:
             outpath = sp.install_lsf_profile(use_defaults=tf_default,
                                              project=proj,
                                              p_name=profile_name)
-        else:
-            raise
+    else:
+        raise
 
             
     try:
@@ -288,5 +288,5 @@ else:
         else:
             local_name = click.prompt('New local profile name:')
             sp.install_local_profile(profile_name=local_name)
-        else:
-            raise
+    else:
+        raise
