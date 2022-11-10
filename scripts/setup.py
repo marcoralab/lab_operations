@@ -89,7 +89,7 @@ def link_if_absent(src, dst=None, destdir=None):
     if not (os.path.exists(dst) or os.path.isdir(dst)):
         relpath = os.path.relpath(src, dir)
         os.symlink(relpath, dst)
-    if os.path.islink('/Users/bfh/.tmux.conf'):
+    if os.path.islink(dst):
         return os.readlink(dst)
     else:
         return dst
@@ -173,7 +173,7 @@ if not scriptdir in os.environ['PATH'].split(':'):
 
 mkdir([home, '.ssh'], mode=0o700)
 
-if os_type == 'MacOS':
+if not isminerva:
     mkdir([home, '.ssh', 'cm_socket'], mode=0o700)
     configpath = nicepath([home, '.ssh', 'config'])
     minerva_username = input("Enter minerva username: ")
@@ -219,5 +219,74 @@ Host *
                 print(f'         {realpath}\n')
 else:
     print('making ssh keys...')
-    make_keys(home, overwrite=True)    
+    make_keys(home, overwrite=True)
     
+    print('setting up singularity cache')
+    user = os.environ['USER']
+    cachedir = ['/sc/arion/work', user, 'singularity', 'cache']
+    sdir = [home, '.singularity']
+    mkdir(cachedir)
+    mkdir(sdir)
+    import ipdb; ipdb.set_trace()
+    cachedir_home = nicepath(sdir + ['cache'])
+    if os.path.exists(cachedir_home):
+      os.remove(cachedir_home)
+    os.symlink(nicepath(cachedir), cachedir_home)
+    link_if_absent(cachedir, 'cache', sdir)
+    
+    print('installing LSF profile for snakemake')
+    # load in profile script as a module
+    profscript = nicepath([home, 'local', 'src', 'lab_operations',
+                           'scripts', 'setup_snakemake_profiles.py'])
+    spec = importlib.util.spec_from_file_location('snakeprofile', profscript)
+    snakeprofile = importlib.util.module_from_spec(spec)
+    sys.modules['snakeprofile'] = sp
+    spec.loader.exec_module(sp)
+    import click
+    #Add the profile
+    confdir = os.path.expanduser('~/.config/snakemake')
+    proj = click.prompt('Minerva Project:', default='acc_LOAD')
+    
+    profile_name='lsf'
+    tf_overwrite = False
+    if os.path.isdir(os.path.join(confdir, 'lsf')):
+        print('lsf profile already exists.')
+        if click.confirm('Overwrite LSF profile?', default=True):
+            tf_overwrite = True
+        else:
+            profile_name = click.prompt('Profile Name:')
+    else:
+        profile_name='choose_quiet'
+    try:
+        outpath = sp.install_lsf_profile(use_defaults=True,
+                                         project=proj,
+                                         overwrt=tf_overwrite,
+                                         p_name=profile_name)
+    except OutputDirExistsException:
+        print('lsf profile already exists.')
+        if click.confirm('Overwrite LSF profile?', default=True):
+            outpath = sp.install_lsf_profile(use_defaults=tf_default,
+                                             project=proj,
+                                             overwrt=True)
+        else:
+            profile_name = click.prompt('New profile name:')
+            outpath = sp.install_lsf_profile(use_defaults=tf_default,
+                                             project=proj,
+                                             p_name=profile_name)
+        else:
+            raise
+
+            
+    try:
+        sp.install_local_profile(lsf_profile=outpath, profile_name="local")
+    except OutputDirExistsException:
+        print('"local" lsf profile already exists.')
+        if click.confirm('Overwrite local LSF profile?', default=True):
+            sp.install_local_profile(lsf_profile=outpath,
+                                     profile_name="local",
+                                     overwrt=True)
+        else:
+            local_name = click.prompt('New local profile name:')
+            sp.install_local_profile(profile_name=local_name)
+        else:
+            raise
