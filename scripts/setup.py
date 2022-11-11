@@ -129,6 +129,16 @@ else:
     print('Updating scripts and config files...')
     output = subprocess.check_output(['git', '-C', path_labops, 'pull'])
 
+    
+path_rstudio = nicepath([home, 'local', 'src', 'rstudio_server'])
+if not os.path.isdir(path_rstudio):
+    print('Cloning scripts and config files...')
+    pygit2.clone_repository('http://github.com/BEFH/rstudio-server-conda.git',
+                            path_rstudio, callbacks=MyRemoteCallbacks())
+else:
+    print('Updating scripts and config files...')
+    output = subprocess.check_output(['git', '-C', path_rstudio, 'pull'])
+
 # Symlink config files
 
 f_conf = [f for f in pathlib.Path(path_labops + "/config_files/").glob('*')
@@ -208,6 +218,9 @@ Host *
 
     f_scptlinks = [link_if_absent(src, destdir=[home, 'local', 'scripts'])
                    for src in f_scpt]
+    
+    f_rslink = link_if_absent(nicepath([path_rstudio, 'singularity', 'rstudio_minerva']),
+                              destdir=[home, 'local', 'scripts'])
     
     discrep_srpt = {os.path.basename(x): y for x, y in zip(f_scpt, f_scptlinks)
                     if not compare_paths(x, y)}
