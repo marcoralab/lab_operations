@@ -11,9 +11,10 @@
 #                  : Andreas Lugmayr, Mike Boss                               #
 #  Date            : October 2021                                             #
 #  Location        : Mount Sinai (originally ETH Zurich)                      #
-#  Version         : 0.7.0                                                    #
+#  Version         : 0.7.1                                                    #
 #  Change history  :                                                          #
 #                                                                             #
+#  17.11.2022    Create remote dir, include session name in lsf lognames      #
 #  17.11.2022    Move remote files                                            #
 #  07.11.2022    Allow long jobs                                              #
 #  03.10.2022    Native client compatibility with Apple Silicon               #
@@ -44,7 +45,7 @@
 ###############################################################################
 
 # Version
-S_VERSION="0.7.0"
+S_VERSION="0.7.1"
 
 # Script directory
 # old RS_SCRIPTDIR=$(pwd)
@@ -311,6 +312,21 @@ S_FILE_JOB="$RS_WORKDIR/.vscode$S_SESSION.lsf"
 S_FILE_IP="$RS_WORKDIR/vscip$S_SESSION"
 
 ###############################################################################
+# Check directories and files                                                 #
+###############################################################################
+
+echoinfo "Checking directories"
+
+info_workdir=$(echoinfo "Creating working directory")
+ssh $S_HOSTNAME bash <<ENDSSH
+# check workdir
+if [[ ! -d $RS_WORKDIR ]]; then
+  mkdir -p $RS_WORKDIR
+  echo $info_workdir
+fi
+ENDSSH
+
+###############################################################################
 # Check for leftover files                                                    #
 ###############################################################################
 
@@ -520,8 +536,8 @@ ssh $S_HOSTNAME "cat > $S_FILE_JOB" <<<cat <<EOF
 #BSUB -R span[hosts=1]
 #BSUB -W $S_RUN_TIME
 #BSUB -R rusage[mem=$S_MEM_PER_CPU_CORE]
-#BSUB -oo $RS_WORKDIR/vscode_%J.out
-#BSUB -eo $RS_WORKDIR/vscode_%J.err
+#BSUB -oo $RS_WORKDIR/vscode$S_SESSION_%J.out
+#BSUB -eo $RS_WORKDIR/vscode$S_SESSION_%J.err
 #BSUB -L /bin/bash
 EOF
 
