@@ -11,9 +11,10 @@
 #                  : Andreas Lugmayr, Mike Boss                               #
 #  Date            : October 2021                                             #
 #  Location        : Mount Sinai (originally ETH Zurich)                      #
-#  Version         : 0.6.5                                                    #
+#  Version         : 0.7.0                                                    #
 #  Change history  :                                                          #
 #                                                                             #
+#  17.11.2022    Move remote files                                            #
 #  07.11.2022    Allow long jobs                                              #
 #  03.10.2022    Native client compatibility with Apple Silicon               #
 #  29.09.2022    Further refinements from rstudio;                            #
@@ -43,7 +44,7 @@
 ###############################################################################
 
 # Version
-S_VERSION="0.6.5"
+S_VERSION="0.7.0"
 
 # Script directory
 # old RS_SCRIPTDIR=$(pwd)
@@ -302,8 +303,8 @@ echoinfo "Getting username and shell\n"
 S_REMOTE_SHELL=$(ssh $S_HOSTNAME 'echo "$SHELL"' | grep -Eo '[^/]+$')
 S_USERNAME=$(ssh $S_HOSTNAME 'echo "$USER"')
 
-#RS_WORKDIR="/hpc/users/$S_USERNAME/minerva_jobs/vscode"
-RS_WORKDIR="/hpc/users/$S_USERNAME"
+RS_WORKDIR="/hpc/users/$S_USERNAME/minerva_jobs/vscode"
+#RS_WORKDIR="/hpc/users/$S_USERNAME"
 S_BASE_RECONNECT=".reconnect_info_vsc$S_SESSION"
 S_FILE_RECONNECT="$RS_WORKDIR/$S_BASE_RECONNECT"
 S_FILE_JOB="$RS_WORKDIR/.vscode$S_SESSION.lsf"
