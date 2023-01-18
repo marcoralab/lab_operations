@@ -70,7 +70,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
 
   if conda env list | grep -qvE "^py$pyversion\s+"; then
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
-      jupyterlab biopython visidata miller flippyr mamba gh git vim pygit2 \
+      jupyterlab biopython visidata miller flippyr gh git vim pygit2 \
       powerline-status click cookiecutter squashfs-tools radian \
       r-base=$rversion r-essentials r-languageserver
   fi
