@@ -61,8 +61,10 @@ if echo $HOME | grep -q "^/hpc/users/"; then
 
   if ! mamba --help &> /dev/null; then
     conda install -y mamba
+    mamba clean --index-cache
     mamba update -y mamba conda
   elif [[ $newconda -eq 0 ]]; then
+    mamba clean --index-cache
     mamba update -y mamba conda
   fi
   
@@ -108,6 +110,7 @@ else
     fi
     
     conda install -y mamba
+    mamba clean --index-cache
     mamba update -y mamba conda
     mamba install -y python=$pyversion $lcl_pkgs
   fi
@@ -119,6 +122,7 @@ else
     if ! mamba --help &> /dev/null; then
       conda install -y mamba
     fi
+    mamba clean --index-cache
     mamba update -y mamba conda
     mamba install -y $lcl_pkgs
     mamba update -y $lcl_pkgs
