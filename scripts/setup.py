@@ -188,7 +188,7 @@ else:
 path_rstudio = nicepath([home, 'local', 'src', 'rstudio_server'])
 if not os.path.isdir(path_rstudio):
     repo_rstudio = pygit2.clone_repository('http://github.com/BEFH/rstudio-server-conda.git',
-        path_labops, callbacks=GitRemoteCallbacks(
+        path_rstudio, callbacks=GitRemoteCallbacks(
             'Cloning RStudio Script...', 'Cloning'))
 else:
     print('Updating rstudio...')
