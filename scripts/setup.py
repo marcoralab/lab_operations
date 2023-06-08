@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import pygit2
 import pathlib
-import tqdm
+from tqdm import tqdm
 
 # From pythoncircle.com
 def octal_to_string(octal):
