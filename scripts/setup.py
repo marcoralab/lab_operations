@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import pygit2
 import pathlib
+import tqdm
 
 # From pythoncircle.com
 def octal_to_string(octal):
@@ -104,6 +105,49 @@ def compare_paths(x, y):
         return os.path.abspath(unlinked)
     return forcomp(x) == forcomp(y)
 
+def pull(repo, remote_name='origin', branch='main', reponame = 'Repo'):
+    # Adapted from https://github.com/MichaelBoselowitz/pygit2-examples/blob/master/examples.py
+    for remote in repo.remotes:
+        if remote.name == remote_name:
+            remote.fetch()
+            remote_master_id = repo.lookup_reference('refs/remotes/origin/%s' % (branch)).target
+            merge_result, _ = repo.merge_analysis(remote_master_id)
+            # Up to date, do nothing
+            if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                print(f'{reponame} up to date')
+                return
+            # We can just fastforward
+            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
+                repo.checkout_tree(repo.get(remote_master_id))
+                try:
+                    master_ref = repo.lookup_reference('refs/heads/%s' % (branch))
+                    master_ref.set_target(remote_master_id)
+                except KeyError:
+                    repo.create_branch(branch, repo.get(remote_master_id))
+                repo.head.set_target(remote_master_id)
+                print(f'{reponame} updated')
+            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
+                repo.merge(remote_master_id)
+
+                if repo.index.conflicts is not None:
+                    for conflict in repo.index.conflicts:
+                        print('Conflicts found in: ' + conflict[0].path)
+                    print('Conflicts found. Not updating.')
+
+                user = repo.default_signature
+                tree = repo.index.write_tree()
+                commit = repo.create_commit('HEAD',
+                                            user,
+                                            user,
+                                            'Merge!',
+                                            tree,
+                                            [repo.head.target, remote_master_id])
+                # We need to do this or git CLI will think we are still merging.
+                repo.state_cleanup()
+                print(f'{reponame} merged and updated')
+            else:
+                raise AssertionError('Unknown merge analysis result')
+
 os_type = get_os_type()
 
 shell = os.path.basename(os.environ['SHELL'])
@@ -116,28 +160,40 @@ assert os.environ['SETUP_SCRIPT'] == '1', 'Run setup.sh instead!'
 
 for x in ['scripts', 'src', 'bin']: mkdir([home, 'local', x])
 
-class MyRemoteCallbacks(pygit2.RemoteCallbacks):
+class GitRemoteCallbacks(pygit2.RemoteCallbacks):
+    def __init__(self, message = None, op = None):
+        super().__init__()
+        if message:
+            print(message)
+        args = {'colour': '#00ff00', 'smoothing': 0.1, 'postfix': 'objects'}
+        if op:
+            args['desc'] = op
+        self.pbar = tqdm(**args)
     def transfer_progress(self, stats):
-        print(f'{stats.indexed_objects}/{stats.total_objects}')
+        self.pbar.total = stats.total_objects
+        self.pbar.n = stats.indexed_objects
+        self.pbar.refresh()
 
 path_labops = nicepath([home, 'local', 'src', 'lab_operations'])
 if not os.path.isdir(path_labops):
-    print('Cloning scripts and config files...')
-    pygit2.clone_repository('http://github.com/marcoralab/lab_operations.git',
-                            path_labops, callbacks=MyRemoteCallbacks())
+    repo_ops = pygit2.clone_repository('http://github.com/marcoralab/lab_operations.git',
+        path_labops, callbacks=GitRemoteCallbacks(
+            'Cloning scripts and config files...', 'Cloning'))
 else:
     print('Updating scripts and config files...')
-    output = subprocess.check_output(['git', '-C', path_labops, 'pull'])
+    repo_ops = pygit2.Repository(path_labops)
+    pull(repo_ops, reponame = "Scripts and config files")
 
     
 path_rstudio = nicepath([home, 'local', 'src', 'rstudio_server'])
 if not os.path.isdir(path_rstudio):
-    print('Cloning scripts and config files...')
-    pygit2.clone_repository('http://github.com/BEFH/rstudio-server-conda.git',
-                            path_rstudio, callbacks=MyRemoteCallbacks())
+    repo_rstudio = pygit2.clone_repository('http://github.com/BEFH/rstudio-server-conda.git',
+        path_labops, callbacks=GitRemoteCallbacks(
+            'Cloning RStudio Script...', 'Cloning'))
 else:
-    print('Updating scripts and config files...')
-    output = subprocess.check_output(['git', '-C', path_rstudio, 'pull'])
+    print('Updating rstudio...')
+    repo_rstudio = pygit2.Repository(path_rstudio)
+    pull(repo_rstudio, reponame = "RStudio script")
 
 # Symlink config files
 
@@ -306,7 +362,7 @@ else:
                                                  project=proj,
                                                  p_name=profile_name)
         else:
-            raise
+            print("LSF profile installed.")
     
             
     try:
@@ -324,4 +380,4 @@ else:
             local_name = click.prompt('New local profile name:')
             sp.install_local_profile(profile_name=local_name)
     else:
-        raise
+        print("Local profile installed.")
