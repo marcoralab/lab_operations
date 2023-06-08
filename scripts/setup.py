@@ -182,7 +182,7 @@ if not os.path.isdir(path_labops):
 else:
     print('Updating scripts and config files...')
     repo_ops = pygit2.Repository(path_labops)
-    pull(repo_ops, reponame = "Scripts and config files")
+    pull(repo_ops, reponame="Scripts and config files")
 
     
 path_rstudio = nicepath([home, 'local', 'src', 'rstudio_server'])
@@ -193,7 +193,7 @@ if not os.path.isdir(path_rstudio):
 else:
     print('Updating rstudio...')
     repo_rstudio = pygit2.Repository(path_rstudio)
-    pull(repo_rstudio, reponame = "RStudio script")
+    pull(repo_rstudio, branch="master", reponame="RStudio script")
 
 # Symlink config files
 
