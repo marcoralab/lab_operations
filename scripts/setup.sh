@@ -29,9 +29,9 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   newconda=0
   if ! conda --help &> /dev/null; then
     export newconda=1
-    conda_prefix="/sc/arion/work/$USER/conda/miniconda3"
-    conda_inst=Miniconda3-latest-Linux-x86_64.sh
-    curl https://repo.anaconda.com/miniconda/$conda_inst > $conda_inst
+    conda_prefix="/sc/arion/work/$USER/conda/mambaforge"
+    conda_inst=Mambaforge-$(uname)-$(uname -m).sh
+    curl -L "https://github.com/conda-forge/miniforge/releases/latest/download/$conda_inst" > $conda_inst
     bash $conda_inst -bp $conda_prefix
     rm $conda_inst
     $conda_prefix/bin/conda init $shelltype
@@ -62,14 +62,16 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   if ! mamba --help &> /dev/null; then
     conda install -y mamba
     mamba clean --index-cache -y
-    mamba update -y mamba conda
   elif [[ $newconda -eq 0 ]]; then
     mamba clean --index-cache -y
-    mamba update -y mamba conda
+  fi
+  mamba update -y mamba conda
+  
+  if ! mamba activate &> /dev/null; then
+    mamba init
+    mamba init $shelltype
   fi
   
-  mamba init
-
   if conda env list | grep -qvE "^py$pyversion\s+"; then
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
       jupyterlab biopython visidata miller flippyr gh git vim pygit2 \
@@ -90,12 +92,9 @@ else
   if ! conda --help &> /dev/null; then
     export newconda=1
     curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/local.condarc > $HOME/.condarc
-    if [ "$(uname)" == "Darwin" ]; then
-      conda_inst="Miniconda3-latest-MacOSX-x86_64.sh"
-    else
-      conda_inst="Miniconda3-latest-Linux-x86_64.sh"
-    fi
-    curl https://repo.anaconda.com/miniconda/$conda_inst > $conda_inst
+    conda_prefix="/sc/arion/work/$USER/conda/mambaforge"
+    conda_inst=Mambaforge-$(uname)-$(uname -m).sh
+    curl -L "https://github.com/conda-forge/miniforge/releases/latest/download/$conda_inst" > $conda_inst
     bash $conda_inst -b
     rm $conda_inst
     $HOME/miniconda3/bin/conda init $shelltype
@@ -108,9 +107,6 @@ else
       $HOME/miniconda3/bin/conda init bash
       source $HOME/.bash_profile
     fi
-    
-    conda install -y mamba
-    mamba clean --index-cache -y
     mamba update -y mamba conda
     mamba install -y python=$pyversion $lcl_pkgs
   fi
@@ -121,19 +117,22 @@ else
     fi
     if ! mamba --help &> /dev/null; then
       conda install -y mamba
+      mamba clean --index-cache -y
     fi
-    mamba clean --index-cache -y
     mamba update -y mamba conda
     mamba install -y $lcl_pkgs
     mamba update -y $lcl_pkgs
   fi
 
-  mamba init
+  if ! mamba activate &> /dev/null; then
+    mamba init
+    mamba init $shelltype
+  fi
 fi
 
 export SETUP_SCRIPT=1
 curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.py > setup.py
-python3 setup.py
+python3 setup.py || echo Main setup script failed. Please tell Brian.
 rm setup.py
 
 if [[ $minerva -eq 1 ]]; then
