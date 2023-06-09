@@ -97,14 +97,14 @@ else
     curl -L "https://github.com/conda-forge/miniforge/releases/latest/download/$conda_inst" > $conda_inst
     bash $conda_inst -b
     rm $conda_inst
-    $HOME/miniconda3/bin/conda init $shelltype
+    $HOME/mambaforge/bin/conda init $shelltype
     if [[ $SHELLCONF == "other" ]]; then
       echo "Unknown shell. Please rerun this script to continue."
       exit 1
     elif [[ $SHELLCONF == "bash" ]]; then
       source $SHELLCONF
     else
-      $HOME/miniconda3/bin/conda init bash
+      $HOME/mambaforge/bin/conda init bash
       source $HOME/.bash_profile
     fi
     mamba update -y mamba conda
