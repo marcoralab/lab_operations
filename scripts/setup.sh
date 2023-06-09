@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail # STRICT MODE
-pyversion="3.10"
+pyversion="3.11"
 rversion="4.2"
 
 shelltype=$(basename $SHELL)
