@@ -56,7 +56,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
       $conda_prefix/bin/conda init bash
       export PS1=''
       echo Sourcing BASH profile for remainder of script
-      source $HOME/.bash_profile
+      source $HOME/.bashrc || echo "Nonzero source return"
     fi
     echo Done installing Mambaforge
   else
@@ -113,7 +113,7 @@ else
       source $SHELLCONF
     else
       $HOME/mambaforge/bin/conda init bash
-      source $HOME/.bash_profile || echo ""
+      source $HOME/.bash_profile
     fi
     mamba update -y mamba conda
     mamba install -y python=$pyversion $lcl_pkgs
