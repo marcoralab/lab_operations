@@ -61,6 +61,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
       ROXTERM_ID=""
       KONSOLE_DBUS_SESSION=""
       TERMCAP=""
+      SEND_256_COLORS_TO_REMOTE=""
       source $HOME/.bashrc || echo "Nonzero source return"
     fi
     echo Done installing Mambaforge
