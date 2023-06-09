@@ -54,15 +54,22 @@ if echo $HOME | grep -q "^/hpc/users/"; then
       unset __conda_setup
     else
       $conda_prefix/bin/conda init bash
-      export PS1=''
       echo Sourcing BASH profile for remainder of script
+      PS1=''
       COLORTERM=""
       XTERM_VERSION=""
       ROXTERM_ID=""
       KONSOLE_DBUS_SESSION=""
       TERMCAP=""
       SEND_256_COLORS_TO_REMOTE=""
-      source $HOME/.bashrc || echo "Nonzero source return"
+      USER_LS_COLORS=""
+      QT_GRAPHICSSYSTEM_CHECKED=""
+      QT_GRAPHICSSYSTEM=""
+      QTDIR=""
+      KSH_VERSION=""
+      ZSH_VERSION=""
+      snakemake_internet=""
+      source $HOME/.bashrc
     fi
     echo Done installing Mambaforge
   else
