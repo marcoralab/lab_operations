@@ -29,11 +29,13 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   newconda=0
   if ! conda --help &> /dev/null; then
     export newconda=1
+    echo Installing conda and mamba using Mambaforge
     conda_prefix="/sc/arion/work/$USER/conda/mambaforge"
     conda_inst=Mambaforge-$(uname)-$(uname -m).sh
     curl -L "https://github.com/conda-forge/miniforge/releases/latest/download/$conda_inst" > $conda_inst
     bash $conda_inst -bp $conda_prefix
     rm $conda_inst
+    echo Initializing conda
     $conda_prefix/bin/conda init $shelltype
     if [[ $SHELLCONF == "other" ]]; then
       echo "Unknown shell. Please rerun this script to continue."
@@ -55,24 +57,29 @@ if echo $HOME | grep -q "^/hpc/users/"; then
       export PS1=''
       source $HOME/.bash_profile
     fi
+    echo Done installing Mambaforge
   else
     conda deactivate
   fi
 
   if ! mamba --help &> /dev/null; then
+    echo Installing mamba
     conda install -y mamba
     mamba clean --index-cache -y
   elif [[ $newconda -eq 0 ]]; then
     mamba clean --index-cache -y
   fi
+  echo Updating mamba and conda
   mamba update -y mamba conda
   
   if ! mamba activate &> /dev/null; then
+    echo Initializing mamba
     mamba init
     mamba init $shelltype
   fi
   
   if conda env list | grep -qvE "^py$pyversion\s+"; then
+    echo Installing py$pyversion environment
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
       jupyterlab biopython visidata miller flippyr gh git vim pygit2 \
       powerline-status click cookiecutter squashfs-tools radian \
@@ -130,12 +137,14 @@ else
   fi
 fi
 
+echo Starting python install script
 export SETUP_SCRIPT=1
 curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.py > setup.py
 python3 setup.py || echo Main setup script failed. Please tell Brian.
 rm setup.py
 
 if [[ $minerva -eq 1 ]]; then
+  echo Installing/updating code server
   curl -fsSL https://code-server.dev/install.sh | \
     bash -s -- --prefix ~/local --method standalone
   if ! grep -q singularity $SHELLCONF; then
