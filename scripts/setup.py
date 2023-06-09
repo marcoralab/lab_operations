@@ -176,6 +176,7 @@ class GitRemoteCallbacks(pygit2.RemoteCallbacks):
 
 path_labops = nicepath([home, 'local', 'src', 'lab_operations'])
 if not os.path.isdir(path_labops):
+    import ipdb; ipdb.set_trace()
     repo_ops = pygit2.clone_repository('https://github.com/marcoralab/lab_operations.git',
         path_labops, callbacks=GitRemoteCallbacks(
             'Cloning scripts and config files...', 'Cloning'))
