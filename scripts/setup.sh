@@ -113,7 +113,7 @@ else
       source $SHELLCONF
     else
       $HOME/mambaforge/bin/conda init bash
-      source $HOME/.bashrc
+      source $HOME/.bash_profile || echo ""
     fi
     mamba update -y mamba conda
     mamba install -y python=$pyversion $lcl_pkgs
