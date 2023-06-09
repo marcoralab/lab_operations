@@ -23,7 +23,7 @@ with open(orig_file, 'rb') as plist_file:
     plist = plistlib.load(plist_file)
 
 plist['Sockets']['Listener'] = {'SockNodeName': 'localhost',
-                                'SockServiceName': '5901'}
+                                'SockServiceName': 'vnc-server'}
 
 ret = subprocess.run(['launchctl', 'unload', '-w', orig_file])
 if ret.check_returncode():
