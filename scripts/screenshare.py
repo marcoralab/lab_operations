@@ -3,6 +3,7 @@
 import plistlib
 import os
 import socket
+import subprocess
 
 # from https://gist.github.com/mhofman/171539fa11052aae785fd19d8b382664
 
