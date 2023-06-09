@@ -56,6 +56,10 @@ if echo $HOME | grep -q "^/hpc/users/"; then
       $conda_prefix/bin/conda init bash
       export PS1=''
       echo Sourcing BASH profile for remainder of script
+      COLORTERM=0
+      XTERM_VERSION=0
+      ROXTERM_ID=0
+      KONSOLE_DBUS_SESSION=0
       source $HOME/.bashrc || echo "Nonzero source return"
     fi
     echo Done installing Mambaforge
