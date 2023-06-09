@@ -176,7 +176,7 @@ class GitRemoteCallbacks(pygit2.RemoteCallbacks):
 
 path_labops = nicepath([home, 'local', 'src', 'lab_operations'])
 if not os.path.isdir(path_labops):
-    repo_ops = pygit2.clone_repository('http://github.com/marcoralab/lab_operations.git',
+    repo_ops = pygit2.clone_repository('https://github.com/marcoralab/lab_operations.git',
         path_labops, callbacks=GitRemoteCallbacks(
             'Cloning scripts and config files...', 'Cloning'))
 else:
@@ -187,7 +187,7 @@ else:
     
 path_rstudio = nicepath([home, 'local', 'src', 'rstudio_server'])
 if not os.path.isdir(path_rstudio):
-    repo_rstudio = pygit2.clone_repository('http://github.com/BEFH/rstudio-server-conda.git',
+    repo_rstudio = pygit2.clone_repository('https://github.com/BEFH/rstudio-server-conda.git',
         path_rstudio, callbacks=GitRemoteCallbacks(
             'Cloning RStudio Script...', 'Cloning'))
 else:
