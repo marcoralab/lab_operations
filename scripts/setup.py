@@ -69,7 +69,7 @@ def make_keys(home, overwrite=False):
         assert r.returncode == 0, 'Error generating RSA key'
     else:
         print('Keys already exist. Skipping RSA ssh-keygen')
-    
+
     if not os.path.isfile(f_elyptic):
         cmd_elyptickey = ('ssh-keygen -t ed25519 -a 100 '
                           f'-f {f_elyptic} -P ""')
@@ -170,33 +170,33 @@ def pull(repo, remote_name='origin', branch='main', repo_name='Repo', remote_url
             else:
                 raise
         remote_master_id = repo.lookup_reference(f'refs/remotes/{remote_name}/{branch}').target
-        merge_result, _ = repo.merge_analysis(remote_master_id)    
+        merge_result, _ = repo.merge_analysis(remote_master_id)
         if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
             print(f'{repo_name} is up to date')
-            return    
+            return
         elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
-            repo.checkout_tree(repo.get(remote_master_id))    
+            repo.checkout_tree(repo.get(remote_master_id))
             try:
                 master_ref = repo.lookup_reference(f'refs/heads/{branch}')
                 master_ref.set_target(remote_master_id)
             except KeyError:
-                repo.create_branch(branch, repo.get(remote_master_id))    
+                repo.create_branch(branch, repo.get(remote_master_id))
             repo.head.set_target(remote_master_id)
-            print(f'{repo_name} has been updated')    
+            print(f'{repo_name} has been updated')
         elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-            repo.merge(remote_master_id)    
+            repo.merge(remote_master_id)
             if repo.index.conflicts is not None:
                 for conflict in repo.index.conflicts:
                     print(f'Conflicts found in: {conflict[0].path}')
                 print('Conflicts found. Not updating.')
-                return    
+                return
             user = repo.default_signature
             tree = repo.index.write_tree()
             commit = repo.create_commit('HEAD', user, user, 'Merge!', tree,
-                                        [repo.head.target, remote_master_id])    
+                                        [repo.head.target, remote_master_id])
             # Clean up the repository state to avoid the Git CLI thinking we are still merging.
             repo.state_cleanup()
-            print(f'{repo_name} has been merged and updated')    
+            print(f'{repo_name} has been merged and updated')
         else:
             raise AssertionError('Unknown merge analysis result')
     except:
@@ -236,10 +236,12 @@ assert os.environ['SETUP_SCRIPT'] == '1', 'Run setup.sh instead!'
 
 for x in ['scripts', 'src', 'bin']: mkdir([home, 'local', x])
 
+path_labops = nicepath([home, 'local', 'src', 'lab_operations'])
+
 update_repository(
     repo_name='Scripts and config files',
     url='https://github.com/marcoralab/lab_operations.git',
-    path=nicepath([home, 'local', 'src', 'lab_operations']))
+    path=path_labops)
 
 update_repository(
     repo_name='RStudio script',
@@ -279,7 +281,7 @@ if not scriptdir in os.environ['PATH'].split(':'):
         shell_conf = nicepath([home, '.zshrc'])
     else:
         shell_conf = input("Enter absolute path to your shell config file:")
-    
+
     with open(shell_conf, "a") as f:
         if shell == 'fish':
             f.write(f'\nfish_add_path -g "{scriptdir}"\n')
@@ -326,13 +328,13 @@ Host *
 
     f_scptlinks = [link_if_absent(src, destdir=[home, 'local', 'scripts'])
                    for src in f_scpt]
-    
+
     f_rslink = link_if_absent(nicepath([path_rstudio, 'singularity', 'rstudio_minerva']),
                               destdir=[home, 'local', 'scripts'])
-    
+
     discrep_srpt = {os.path.basename(x): y for x, y in zip(f_scpt, f_scptlinks)
                     if not compare_paths(x, y)}
-    
+
     if len(discrep_srpt) > 0:
         for f, realpath in discrep_srpt.items():
             print(f'Warning: The script {f} does not point to the lab repo.')
@@ -344,7 +346,7 @@ Host *
 else:
     print('making ssh keys...')
     make_keys(home, overwrite=True)
-    
+
     print('setting up singularity cache')
     user = os.environ['USER']
     cachedir = ['/sc/arion/work', user, 'singularity', 'cache']
@@ -362,7 +364,7 @@ else:
             for name in dirs:
                 os.rmdir(os.path.join(root, name))
     os.symlink(nicepath(cachedir), cachedir_home)
-    
+
     print('installing LSF profile for snakemake')
     # load in profile script as a module
     profscript = nicepath([home, 'local', 'src', 'lab_operations',
@@ -375,7 +377,7 @@ else:
     #Add the profile
     confdir = os.path.expanduser('~/.config/snakemake')
     proj = click.prompt('Minerva Project:', default='acc_LOAD')
-    
+
     profile_name='lsf'
     tf_overwrite = False
     lsfexists = False
@@ -387,7 +389,7 @@ else:
         lsfexists = True
         mkprompt = 'Continue without creating new LSF profile?'
         makelsf = not click.confirm(mkprompt, default=True)
-    
+
     if makelsf and lsfexists:
         if click.confirm('Overwrite LSF profile?', default=True):
             tf_overwrite = True
@@ -415,8 +417,8 @@ else:
                                                  p_name=profile_name)
         else:
             print("LSF profile installed.")
-    
-            
+
+
     try:
         sp.install_local_profile(lsf_profile=outpath, profile_name="local")
     except sp.OutputDirExistsException:
