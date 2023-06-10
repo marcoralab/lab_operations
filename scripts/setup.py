@@ -105,48 +105,124 @@ def compare_paths(x, y):
         return os.path.abspath(unlinked)
     return forcomp(x) == forcomp(y)
 
-def pull(repo, remote_name='origin', branch='main', reponame = 'Repo'):
-    # Adapted from https://github.com/MichaelBoselowitz/pygit2-examples/blob/master/examples.py
-    for remote in repo.remotes:
-        if remote.name == remote_name:
+class GitRemoteCallbacks(pygit2.RemoteCallbacks):
+    """
+    Custom Git remote callbacks class for progress tracking during repository operations.
+
+    Args:
+        message (str, optional): The message to display before the progress bar. Default is None.
+        op (str, optional): The operation description to display in the progress bar. Default is None.
+
+    Attributes:
+        pbar (tqdm.tqdm): The progress bar object.
+
+    """
+
+    def __init__(self, message=None, op=None):
+        super().__init__()
+        if message:
+            print(message)
+        args = {'colour': '#00ff00', 'smoothing': 0.1, 'postfix': 'objects'}
+        if op:
+            args['desc'] = op
+        self.pbar = tqdm(**args)
+
+    def transfer_progress(self, stats):
+        """
+        Progress tracking callback for Git transfer operations.
+
+        Args:
+            stats (pygit2.TransferProgress): The transfer progress statistics.
+
+        Returns:
+            None
+
+        """
+        self.pbar.total = stats.total_objects
+        self.pbar.n = stats.indexed_objects
+        self.pbar.refresh()
+
+def pull(repo, remote_name='origin', branch='main', repo_name='Repo', remote_url=None):
+    """
+    Pulls updates from a remote Git repository.
+    Adapted from https://github.com/MichaelBoselowitz/pygit2-examples/blob/master/examples.py
+
+    Args:
+        repo (pygit2.Repository): The Git repository object.
+        remote_name (str): The name of the remote. Default is 'origin'.
+        branch (str): The branch to pull. Default is 'main'.
+        repo_name (str): The name of the repository for printing purposes. Default is 'Repo'.
+        remote_url (str): The new URL for the remote. If provided, it will be updated.
+
+    Returns:
+        None
+    """
+    remote = repo.remotes[remote_name]
+    old_url = remote.url
+    try:
+        try:
             remote.fetch()
-            remote_master_id = repo.lookup_reference('refs/remotes/origin/%s' % (branch)).target
-            merge_result, _ = repo.merge_analysis(remote_master_id)
-            # Up to date, do nothing
-            if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
-                print(f'{reponame} up to date')
-                return
-            # We can just fastforward
-            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
-                repo.checkout_tree(repo.get(remote_master_id))
-                try:
-                    master_ref = repo.lookup_reference('refs/heads/%s' % (branch))
-                    master_ref.set_target(remote_master_id)
-                except KeyError:
-                    repo.create_branch(branch, repo.get(remote_master_id))
-                repo.head.set_target(remote_master_id)
-                print(f'{reponame} updated')
-            elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-                repo.merge(remote_master_id)
-
-                if repo.index.conflicts is not None:
-                    for conflict in repo.index.conflicts:
-                        print('Conflicts found in: ' + conflict[0].path)
-                    print('Conflicts found. Not updating.')
-
-                user = repo.default_signature
-                tree = repo.index.write_tree()
-                commit = repo.create_commit('HEAD',
-                                            user,
-                                            user,
-                                            'Merge!',
-                                            tree,
-                                            [repo.head.target, remote_master_id])
-                # We need to do this or git CLI will think we are still merging.
-                repo.state_cleanup()
-                print(f'{reponame} merged and updated')
+        except:
+            if remote_url:
+                remote.url = remote_url
+                remote.save()
+                remote.fetch()
             else:
-                raise AssertionError('Unknown merge analysis result')
+                raise
+        remote_master_id = repo.lookup_reference(f'refs/remotes/{remote_name}/{branch}').target
+        merge_result, _ = repo.merge_analysis(remote_master_id)    
+        if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+            print(f'{repo_name} is up to date')
+            return    
+        elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
+            repo.checkout_tree(repo.get(remote_master_id))    
+            try:
+                master_ref = repo.lookup_reference(f'refs/heads/{branch}')
+                master_ref.set_target(remote_master_id)
+            except KeyError:
+                repo.create_branch(branch, repo.get(remote_master_id))    
+            repo.head.set_target(remote_master_id)
+            print(f'{repo_name} has been updated')    
+        elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
+            repo.merge(remote_master_id)    
+            if repo.index.conflicts is not None:
+                for conflict in repo.index.conflicts:
+                    print(f'Conflicts found in: {conflict[0].path}')
+                print('Conflicts found. Not updating.')
+                return    
+            user = repo.default_signature
+            tree = repo.index.write_tree()
+            commit = repo.create_commit('HEAD', user, user, 'Merge!', tree,
+                                        [repo.head.target, remote_master_id])    
+            # Clean up the repository state to avoid the Git CLI thinking we are still merging.
+            repo.state_cleanup()
+            print(f'{repo_name} has been merged and updated')    
+        else:
+            raise AssertionError('Unknown merge analysis result')
+    except:
+        remote.url = old_url
+        raise
+
+def update_repository(repo_name, url, path, branch='main'):
+    """
+    Clones or updates a Git repository.
+
+    Args:
+        repo_name (str): The name of the repository for printing purposes.
+        url (str): The URL of the Git repository.
+        path (str): The local path where the repository should be cloned or updated.
+        branch (str): The branch to pull. Default is 'main'.
+
+    Returns:
+        None
+    """
+    if not os.path.isdir(path):
+        callback = GitRemoteCallbacks(f'Cloning {repo_name}...', 'Cloning')
+        repo = pygit2.clone_repository(url, path, callbacks=callback)
+    else:
+        print(f'Updating {repo_name}...')
+        repo = pygit2.Repository(path)
+        pull(repo, branch=branch, repo_name=repo_name, remote_url=url)
 
 os_type = get_os_type()
 
@@ -160,41 +236,16 @@ assert os.environ['SETUP_SCRIPT'] == '1', 'Run setup.sh instead!'
 
 for x in ['scripts', 'src', 'bin']: mkdir([home, 'local', x])
 
-class GitRemoteCallbacks(pygit2.RemoteCallbacks):
-    def __init__(self, message = None, op = None):
-        super().__init__()
-        if message:
-            print(message)
-        args = {'colour': '#00ff00', 'smoothing': 0.1, 'postfix': 'objects'}
-        if op:
-            args['desc'] = op
-        self.pbar = tqdm(**args)
-    def transfer_progress(self, stats):
-        self.pbar.total = stats.total_objects
-        self.pbar.n = stats.indexed_objects
-        self.pbar.refresh()
+update_repository(
+    repo_name='Scripts and config files',
+    url='https://github.com/marcoralab/lab_operations.git',
+    path=nicepath([home, 'local', 'src', 'lab_operations']))
 
-path_labops = nicepath([home, 'local', 'src', 'lab_operations'])
-if not os.path.isdir(path_labops):
-    import ipdb; ipdb.set_trace()
-    repo_ops = pygit2.clone_repository('https://github.com/marcoralab/lab_operations.git',
-        path_labops, callbacks=GitRemoteCallbacks(
-            'Cloning scripts and config files...', 'Cloning'))
-else:
-    print('Updating scripts and config files...')
-    repo_ops = pygit2.Repository(path_labops)
-    pull(repo_ops, reponame="Scripts and config files")
-
-    
-path_rstudio = nicepath([home, 'local', 'src', 'rstudio_server'])
-if not os.path.isdir(path_rstudio):
-    repo_rstudio = pygit2.clone_repository('https://github.com/BEFH/rstudio-server-conda.git',
-        path_rstudio, callbacks=GitRemoteCallbacks(
-            'Cloning RStudio Script...', 'Cloning'))
-else:
-    print('Updating rstudio...')
-    repo_rstudio = pygit2.Repository(path_rstudio)
-    pull(repo_rstudio, branch="master", reponame="RStudio script")
+update_repository(
+    repo_name='RStudio script',
+    url='https://github.com/BEFH/rstudio-server-conda.git',
+    path=nicepath([home, 'local', 'src', 'rstudio_server']),
+    branch="master")
 
 # Symlink config files
 

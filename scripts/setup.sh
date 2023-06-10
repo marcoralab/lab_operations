@@ -17,6 +17,12 @@ else
   export SHELLCONF="other"
 fi
 
+source_bashrc() {
+  set +u +e +o pipefail
+  source $HOME/.bashrc
+  set -euo pipefail
+}
+
 minerva=0
 
 if echo $HOME | grep -q "^/hpc/users/"; then
@@ -25,7 +31,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   echo -e "\nauto_activate_base: false\n" >> $HOME/.condarc
   mkdir -p /sc/arion/work/$USER/conda/envs
   mkdir -p /sc/arion/work/$USER/conda/pkgs
-  
+
   newconda=0
   if ! conda --help &> /dev/null; then
     export newconda=1
@@ -54,26 +60,14 @@ if echo $HOME | grep -q "^/hpc/users/"; then
       unset __conda_setup
     else
       $conda_prefix/bin/conda init bash
-      echo Sourcing BASH profile for remainder of script
-      PS1=''
-      COLORTERM=""
-      XTERM_VERSION=""
-      ROXTERM_ID=""
-      KONSOLE_DBUS_SESSION=""
-      TERMCAP=""
-      SEND_256_COLORS_TO_REMOTE=""
-      USER_LS_COLORS=""
-      QT_GRAPHICSSYSTEM_CHECKED=""
-      QT_GRAPHICSSYSTEM=""
-      QTDIR=""
-      KSH_VERSION=""
-      ZSH_VERSION=""
-      snakemake_internet=""
-      source $HOME/.bashrc
+      source_bashrc
     fi
     echo Done installing Mambaforge
-  else
+  elif [ -n "${CONDA_PREFIX+x}" ]; then
+    source_bashrc
     conda deactivate
+  else
+    source_bashrc
   fi
 
   if ! mamba --help &> /dev/null; then
@@ -85,27 +79,27 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   fi
   echo Updating mamba and conda
   mamba update -y mamba conda
-  
+
   if ! mamba activate &> /dev/null; then
     echo Initializing mamba
     mamba init
     mamba init $shelltype
   fi
-  
-  if conda env list | grep -qvE "^py$pyversion\s+"; then
+
+  if ! conda env list | grep -qE "^py$pyversion\s+"; then
     echo Installing py$pyversion environment
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
       jupyterlab biopython visidata miller flippyr gh git vim pygit2 \
       powerline-status click cookiecutter squashfs-tools radian \
       r-base=$rversion r-essentials r-languageserver
   fi
-  
+
   if [[ "$shelltype" == "bash" ]]; then
     printf "\n\nconda activate py$pyversion\n" >> $HOME/.bashrc
   else
-    printf "\n\nconda activate py$pyversion\n" >> $SHELLCONF  
+    printf "\n\nconda activate py$pyversion\n" >> $SHELLCONF
   fi
-  conda activate py$pyversion
+  conda activate py$pyversion || source_bashrc
 else
   lcl_pkgs="snakemake ipython ipdb jupyterlab biopython \
     visidata miller flippyr pygit2 powerline-status"
