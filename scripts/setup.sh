@@ -4,6 +4,8 @@ set -euo pipefail # STRICT MODE
 pyversion="3.11"
 rversion="4.2"
 
+export MAMBA_NO_BANNER=1
+
 shelltype=$(basename $SHELL)
 echo "Using $shelltype"
 
@@ -27,8 +29,10 @@ minerva=0
 
 if echo $HOME | grep -q "^/hpc/users/"; then
   minerva=1
-  curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/.condarc > $HOME/.condarc
+  echo Downloading .condarc to home direcctory
+  curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/.condarc > $HOME/.condarc 2> /dev/null
   echo -e "\nauto_activate_base: false\n" >> $HOME/.condarc
+  echo Ensuring conda and mamba are installed and updated
   mkdir -p /sc/arion/work/$USER/conda/envs
   mkdir -p /sc/arion/work/$USER/conda/pkgs
 
@@ -65,7 +69,9 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     echo Done installing Mambaforge
   elif [ -n "${CONDA_PREFIX+x}" ]; then
     source_bashrc
+    set +u
     conda deactivate
+    set -u
   else
     source_bashrc
   fi
@@ -95,9 +101,12 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   fi
 
   if [[ "$shelltype" == "bash" ]]; then
-    printf "\n\nconda activate py$pyversion\n" >> $HOME/.bashrc
+    SHELLCONF_activate="$HOME/.bashrc"
   else
-    printf "\n\nconda activate py$pyversion\n" >> $SHELLCONF
+    SHELLCONF_activate="$SHELLCONF"
+  fi
+  if ! grep -q "conda activate py$pyversion" "$SHELLCONF_activate"; then
+    printf "\n\nconda activate py$pyversion\n" >> $SHELLCONF_activate
   fi
   conda activate py$pyversion || source_bashrc
 else
@@ -106,7 +115,9 @@ else
   newconda=0
   if ! conda --help &> /dev/null; then
     export newconda=1
-    curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/local.condarc > $HOME/.condarc
+    echo Downloading .condarc to home direcctory
+    curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/local.condarc > $HOME/.condarc 2> /dev/null
+    echo Ensuring conda and mamba are installed and updated
     conda_prefix="/sc/arion/work/$USER/conda/mambaforge"
     conda_inst=Mambaforge-$(uname)-$(uname -m).sh
     curl -L "https://github.com/conda-forge/miniforge/releases/latest/download/$conda_inst" > $conda_inst
@@ -147,9 +158,7 @@ fi
 
 echo Starting python install script
 export SETUP_SCRIPT=1
-curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.py > setup.py
 python3 setup.py || echo Main setup script failed. Please tell Brian.
-rm setup.py
 
 if [[ $minerva -eq 1 ]]; then
   echo Installing/updating code server
