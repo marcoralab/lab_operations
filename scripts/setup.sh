@@ -158,7 +158,10 @@ fi
 
 echo Starting python install script
 export SETUP_SCRIPT=1
-python3 setup.py || echo Main setup script failed. Please tell Brian.
+
+curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.py > setup_lab.py
+python3 setup_lab.py || echo Main setup script failed. Please tell Brian.
+rm setup_lab.py
 
 if [[ $minerva -eq 1 ]]; then
   echo Installing/updating code server
