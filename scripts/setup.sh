@@ -111,7 +111,8 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   conda activate py$pyversion || source_bashrc
 else
   lcl_pkgs="snakemake ipython ipdb jupyterlab biopython \
-    visidata miller flippyr pygit2 powerline-status"
+    visidata miller flippyr pygit2 powerline-status vim \
+    tmux wget gh curl gawk sed grep nodejs miller"
   newconda=0
   if ! conda --help &> /dev/null; then
     export newconda=1
@@ -153,6 +154,14 @@ else
   if ! mamba activate &> /dev/null; then
     mamba init
     mamba init $shelltype
+  fi
+  
+  if nativefier --version &> /dev/null; then
+    echo updating Nativefier
+    npm update --no-update-notifier --no-fund -g nativefier
+  else
+    echo Installing Nativefier
+    npm install --no-update-notifier --no-fund -g nativefier
   fi
 fi
 
