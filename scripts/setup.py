@@ -237,6 +237,7 @@ assert os.environ['SETUP_SCRIPT'] == '1', 'Run setup.sh instead!'
 for x in ['scripts', 'src', 'bin']: mkdir([home, 'local', x])
 
 path_labops = nicepath([home, 'local', 'src', 'lab_operations'])
+path_rstudio = nicepath([home, 'local', 'src', 'rstudio_server'])
 
 update_repository(
     repo_name='Scripts and config files',
@@ -246,7 +247,7 @@ update_repository(
 update_repository(
     repo_name='RStudio script',
     url='https://github.com/BEFH/rstudio-server-conda.git',
-    path=nicepath([home, 'local', 'src', 'rstudio_server']),
+    path=path_rstudio,
     branch="master")
 
 # Symlink config files
