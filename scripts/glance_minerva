@@ -11,9 +11,10 @@
 #                  : Andreas Lugmayr, Mike Boss                               #
 #  Date            : October 2021                                             #
 #  Location        : Mount Sinai (originally ETH Zurich)                      #
-#  Version         : 0.7.1                                                    #
+#  Version         : 0.7.2                                                    #
 #  Change history  :                                                          #
 #                                                                             #
+#  02.07.2023    Adapt script for Glances                                     #
 #  17.11.2022    Create remote dir, include session name in lsf lognames      #
 #  17.11.2022    Move remote files                                            #
 #  07.11.2022    Allow long jobs                                              #
@@ -45,7 +46,7 @@
 ###############################################################################
 
 # Version
-S_VERSION="0.7.1"
+S_VERSION="0.7.2"
 
 # Script directory
 # old GLANCES_SCRIPTDIR=$(pwd)
@@ -321,7 +322,7 @@ fi
 
 echoinfo "Getting username and shell"
 S_USERINFO=$(ssh -T $S_HOSTNAME 'getent passwd $USER')
-REMOTE_SHELL=$(grep -Eo '[^/]+$' <<< $S_USERINFO)
+S_REMOTE_SHELL=$(grep -Eo '[^/]+$' <<< $S_USERINFO)
 S_USERNAME=$(grep -Eo '^[^:]+' <<< $S_USERINFO)
 
 GLANCES_WORKDIR="/hpc/users/$S_USERNAME/minerva_jobs/glances"
@@ -358,7 +359,10 @@ macos_open () {
     plat=arm64
   fi
   native_app="$HOME/.minerva_glances_app/glances_minerva${S_NODE}_$1-darwin-$plat/glances_minerva${S_NODE}_$1.app"
-  if [[ -d $native_app ]]; then
+  already_open=$(ps aux | grep -i $native_app | grep -v grep | wc -l)
+  if [[ $already_open -gt 0 ]]; then
+    echoinfo "Already open in native mode"
+  elif [[ -d $native_app ]]; then
     echoinfo "Opening in native mode"
     open -n $native_app
   elif which nativefier &> /dev/null; then

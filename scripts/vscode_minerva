@@ -11,9 +11,10 @@
 #                  : Andreas Lugmayr, Mike Boss                               #
 #  Date            : October 2021                                             #
 #  Location        : Mount Sinai (originally ETH Zurich)                      #
-#  Version         : 0.7.1                                                    #
+#  Version         : 0.7.2                                                    #
 #  Change history  :                                                          #
 #                                                                             #
+#  04.07.2023    Speed and launch improvements                                #
 #  17.11.2022    Create remote dir, include session name in lsf lognames      #
 #  17.11.2022    Move remote files                                            #
 #  07.11.2022    Allow long jobs                                              #
@@ -45,7 +46,7 @@
 ###############################################################################
 
 # Version
-S_VERSION="0.7.1"
+S_VERSION="0.7.2"
 
 # Script directory
 # old RS_SCRIPTDIR=$(pwd)
@@ -300,12 +301,12 @@ fi
 # Set up directories and files                                                #
 ###############################################################################
 
-echoinfo "Getting username and shell\n"
-S_REMOTE_SHELL=$(ssh $S_HOSTNAME 'echo "$SHELL"' | grep -Eo '[^/]+$')
-S_USERNAME=$(ssh $S_HOSTNAME 'echo "$USER"')
+echoinfo "Getting username and shell"
+S_USERINFO=$(ssh -T $S_HOSTNAME 'getent passwd $USER')
+S_REMOTE_SHELL=$(grep -Eo '[^/]+$' <<< $S_USERINFO)
+S_USERNAME=$(grep -Eo '^[^:]+' <<< $S_USERINFO)
 
 RS_WORKDIR="/hpc/users/$S_USERNAME/minerva_jobs/vscode"
-#RS_WORKDIR="/hpc/users/$S_USERNAME"
 S_BASE_RECONNECT=".reconnect_info_vsc$S_SESSION"
 S_FILE_RECONNECT="$RS_WORKDIR/$S_BASE_RECONNECT"
 S_FILE_JOB="$RS_WORKDIR/.vscode$S_SESSION.lsf"
@@ -318,7 +319,7 @@ S_FILE_IP="$RS_WORKDIR/vscip$S_SESSION"
 echoinfo "Checking directories"
 
 info_workdir=$(echoinfo "Creating working directory")
-ssh $S_HOSTNAME bash <<ENDSSH
+ssh -T $S_HOSTNAME bash <<ENDSSH
 # check workdir
 if [[ ! -d $RS_WORKDIR ]]; then
   mkdir -p $RS_WORKDIR
@@ -339,7 +340,10 @@ macos_open () {
     plat=arm64
   fi
   native_app="$HOME/.minerva_vscode_app/VSCode_minerva${S_SESSION}_$1-darwin-$plat/VSCode_minerva${S_SESSION}_$1.app"
-  if [[ -d $native_app ]]; then
+  already_open=$(ps aux | grep -i $native_app | grep -v grep | wc -l)
+  if [[ $already_open -gt 0 ]]; then
+    echoinfo "Already open in native mode"
+  elif [[ -d $native_app ]]; then
     echoinfo "Opening in native mode"
     open -n $native_app
   elif which nativefier &> /dev/null; then
@@ -358,12 +362,12 @@ macos_open () {
 }
 
 echoinfo "Checking if reconnection is possible\n"
-
+S_RCI=$S_SCRIPTDIR/$S_BASE_RECONNECT
 if [ -z ${S_MANUAL_MULTIPLEX+x} ]; then
   scp $S_HOSTNAME:$S_FILE_RECONNECT $S_SCRIPTDIR/ &> /dev/null
 fi
 
-S_RCI=$S_SCRIPTDIR/$S_BASE_RECONNECT
+
 if [ -f $S_RCI ]; then
   RC_BJOB=$(sed -nE 's/^BJOB[a-zA-Z ]+: (.+)/\1/p' $S_RCI)
   S_CHECKJOB="bjobs | grep -q $RC_BJOB && echo running || echo done"
@@ -424,7 +428,7 @@ info_sessionfile=$(echoinfo "Found old remote session file, deleting it ...")
 info_ipfile=$(echoinfo "Found old IP file, deleting it ...")
 info_jobfile=$(echoinfo "Found old job file, deleting it ...")
 
-ssh $S_HOSTNAME bash <<ENDSSH
+ssh -T $S_HOSTNAME bash <<ENDSSH
 if [[ -f $S_FILE_RECONNECT ]]; then
   echo $info_sessionfile
   rm $S_FILE_RECONNECT
@@ -617,14 +621,20 @@ ENDSSH
   sleep 7
   
   # get remote ip, port and token from files stored on Minerva
-  if ! ssh $S_HOSTNAME "cat $S_FILE_IP" | grep -q FAIL; then
+  if ssh -T $S_HOSTNAME "test -e $S_FILE_IP"; then
+    ipfile=$(ssh -T $S_HOSTNAME "cat $S_FILE_IP")
+  else
+    echoerror "Could not find IP file on $S_HOSTNAME"
+    exit 1
+  fi
+  if ! echo "$ipfile" | grep -q FAIL; then
     echoinfo "Receiving ip and port from the server"
-    S_REMOTE_IP=$(ssh $S_HOSTNAME "cat $S_FILE_IP | grep -m1 'Remote IP' | cut -d ':' -f 2")
-    S_REMOTE_PORT=$(ssh $S_HOSTNAME "cat $S_FILE_IP | grep -m1 'Remote Port' | cut -d ':' -f 2")
+    S_REMOTE_PORT=$(echo "$ipfile" | grep -m1 'Remote Port' | cut -d ':' -f2)
+    S_REMOTE_IP=$(echo "$ipfile" | grep -m1 'Remote IP' | cut -d ':' -f2)
     SUCCESS=1
   else
-    hostname=$(ssh $S_HOSTNAME "cat $S_FILE_IP | grep -m1 'HOSTNAME' | cut -d ':' -f 2")
-    owner=$(ssh $S_HOSTNAME "cat $S_FILE_IP | grep -m1 'OWNER' | cut -d ':' -f 2")
+    hostname=$(echo "$ipfile" | grep -m1 'HOSTNAME' | cut -d ':' -f2)
+    owner=$(echo "$ipfile" | grep -m1 'OWNER' | cut -d ':' -f2)
     if [ $TRY -eq 3 ]; then
       echoerror "$owner is running a session on $hostname, therefore execution is blocked..."
       echoerror "Please resubmit your job to get your job dispatched to another node. "
@@ -633,7 +643,7 @@ ENDSSH
     else
       echoalert "Attempt $TRY failed due to $owner running a session on $hostname:"
       echoalert "Trying again"
-      ssh $S_HOSTNAME "rm $S_FILE_IP"
+      ssh -T $S_HOSTNAME "rm $S_FILE_IP"
     fi
   fi
   TRY=$(($TRY+1))
@@ -654,8 +664,6 @@ get_token () {
 token=$(get_token)
 
 # get a free port on local computer
-## S_LOCAL_PORT=$((3 * 2**14 + RANDOM % 2**14))
-
 echoinfo "Determining free port on local computer"
 
 find_port() {
@@ -680,7 +688,7 @@ $S_FWDCMD
 
 # SSH tunnel is started in the background, pause 3 seconds to make sure
 # it is established before starting the browser
-sleep 3
+sleep 1
 # print information about IP, ports and token
 echoinfo "Server info:"
 echo
