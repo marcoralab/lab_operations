@@ -97,7 +97,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
       jupyterlab biopython visidata miller flippyr gh git vim pygit2 \
       powerline-status click cookiecutter squashfs-tools radian \
-      r-base=$rversion r-essentials r-languageserver
+      r-base=$rversion r-essentials r-languageserver tqdm
   fi
 
   if [[ "$shelltype" == "bash" ]]; then
@@ -111,15 +111,15 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   conda activate py$pyversion || source_bashrc
 else
   lcl_pkgs="snakemake ipython ipdb jupyterlab biopython \
-    visidata miller flippyr pygit2 powerline-status vim \
-    tmux wget gh curl gawk sed grep nodejs miller"
+    visidata flippyr pygit2 vim \
+    tmux wget gh curl gawk sed grep nodejs tqdm"
+  # add miller and powerline-status when arm64 supported
   newconda=0
   if ! conda --help &> /dev/null; then
     export newconda=1
     echo Downloading .condarc to home direcctory
     curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/local.condarc > $HOME/.condarc 2> /dev/null
     echo Ensuring conda and mamba are installed and updated
-    conda_prefix="/sc/arion/work/$USER/conda/mambaforge"
     conda_inst=Mambaforge-$(uname)-$(uname -m).sh
     curl -L "https://github.com/conda-forge/miniforge/releases/latest/download/$conda_inst" > $conda_inst
     bash $conda_inst -b
@@ -147,8 +147,8 @@ else
       mamba clean --index-cache -y
     fi
     mamba update -y mamba conda
-    mamba install -y $lcl_pkgs
-    mamba update -y $lcl_pkgs
+    mamba install -y $lcl_pkgs -c conda-forge
+    mamba update -y $lcl_pkgs -c conda-forge
   fi
 
   if ! mamba activate &> /dev/null; then
