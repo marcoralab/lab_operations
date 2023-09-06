@@ -364,6 +364,8 @@ else:
                 os.remove(os.path.join(root, name))
             for name in dirs:
                 os.rmdir(os.path.join(root, name))
+        os.rmdir(cachedir_home)
+
     os.symlink(nicepath(cachedir), cachedir_home)
 
     print('installing LSF profile for snakemake')

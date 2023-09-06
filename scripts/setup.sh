@@ -178,11 +178,11 @@ if [[ $minerva -eq 1 ]]; then
     bash -s -- --prefix ~/local --method standalone
   if ! grep -q singularity $SHELLCONF; then
     echo "Adding Singularity to $shelltype configuration ($SHELLCONF)"
-    echo "ml singularity/3.10.3 2> /dev/null" >> $SHELLCONF
+    echo "ml singularity/3.6.4 2> /dev/null" >> $SHELLCONF
   fi
   if ! grep -q singularity ~/.bashrc; then
     echo "Adding Singularity to .bashrc"
-    echo "ml singularity/3.10.3 2> /dev/null" >> ~/.bashrc
+    echo "ml singularity/3.6.4 2> /dev/null" >> ~/.bashrc
   fi
 fi
 
