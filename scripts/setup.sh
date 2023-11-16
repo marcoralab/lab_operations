@@ -175,7 +175,7 @@ rm setup_lab.py
 if [[ $minerva -eq 1 ]]; then
   echo Installing/updating code server
   curl -fsSL https://code-server.dev/install.sh | \
-    bash -s -- --prefix ~/local --method standalone
+    bash -s -- --prefix ~/local --method standalone --version 4.16.1
   if ! grep -q singularity $SHELLCONF; then
     echo "Adding Singularity to $shelltype configuration ($SHELLCONF)"
     echo "ml singularity/3.6.4 2> /dev/null" >> $SHELLCONF
