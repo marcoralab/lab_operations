@@ -155,14 +155,6 @@ else
     mamba init
     mamba init $shelltype
   fi
-  
-  if nativefier --version &> /dev/null; then
-    echo updating Nativefier
-    npm update --no-update-notifier --no-fund -g nativefier
-  else
-    echo Installing Nativefier
-    npm install --no-update-notifier --no-fund -g nativefier
-  fi
 fi
 
 echo Starting python install script
