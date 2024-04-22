@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 set -euo pipefail # STRICT MODE
-pyversion="3.11"
-rversion="4.2"
+pyversion="3.10"
+rversion="4.3"
 
 export MAMBA_NO_BANNER=1
 
@@ -94,10 +94,10 @@ if echo $HOME | grep -q "^/hpc/users/"; then
 
   if ! conda env list | grep -qE "^py$pyversion\s+"; then
     echo Installing py$pyversion environment
-    mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
+    mamba create -y -n py$pyversion python=$pyversion snakemake=7.32.4 ipython ipdb \
       jupyterlab biopython visidata miller flippyr gh git vim pygit2 \
       powerline-status click cookiecutter squashfs-tools radian \
-      r-base=$rversion r-essentials r-languageserver tqdm
+      r-base=$rversion r-essentials r-languageserver tqdm r-httpgd
   fi
 
   if [[ "$shelltype" == "bash" ]]; then
@@ -110,7 +110,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   fi
   conda activate py$pyversion || source_bashrc
 else
-  lcl_pkgs="snakemake ipython ipdb jupyterlab biopython \
+  lcl_pkgs="snakemake=7.32.4 ipython ipdb jupyterlab biopython \
     visidata flippyr pygit2 vim \
     tmux wget gh curl gawk sed grep nodejs tqdm"
   # add miller and powerline-status when arm64 supported
@@ -165,9 +165,6 @@ python3 setup_lab.py || echo Main setup script failed. Please tell Brian.
 rm setup_lab.py
 
 if [[ $minerva -eq 1 ]]; then
-  echo Installing/updating code server
-  curl -fsSL https://code-server.dev/install.sh | \
-    bash -s -- --prefix ~/local --method standalone --version 4.16.1
   if ! grep -q singularity $SHELLCONF; then
     echo "Adding Singularity to $shelltype configuration ($SHELLCONF)"
     echo "ml singularity/3.6.4 2> /dev/null" >> $SHELLCONF
