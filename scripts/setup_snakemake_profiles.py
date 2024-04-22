@@ -83,6 +83,101 @@ def install_local_profile(lsf_profile={}, use_defaults='if_no_lsf',
     with open(os.path.join(outdir, 'config.yaml'), 'w') as f:
         yaml.dump(conf, f, default_flow_style=False)
 
+def install_lsf8_profile(lsf_profile={}, use_defaults='if_no_lsf', project='acc_LOAD',
+                         settings={}, profile_name='lsf8', overwrt=False):
+    confdir = os.path.expanduser('~/.config/snakemake')
+
+    defaults = {'max-jobs-per-second': 10, 'max_status_checks_per_second': 1,
+                'wait_between_tries': 0.5, 'latency_wait': 10,
+                'print_shell_commands': True, 'jobs': 2000,
+                'software-deployment-method': ['conda', 'singularity'],
+                'executor': 'lsf',
+                'default_queue': 'premium', 'default_project': project}
+
+    use_defaults = ((use_defaults == 'if_no_lsf' and lsf_profile == '') or
+                    use_defaults is True)
+    
+    assert settings is False or type(settings) is dict, \
+           'settings must be a dictionary'
+    use_settings = len(settings) > 0 and type(settings) is dict
+    assert ((type(settings) is dict and len(settings) > 0)
+            or use_settings is False), 'settings must be a dictionary'
+
+    if use_defaults:
+        conf = deepcopy(defaults)
+    elif lsf_profile:
+        lsf_profile_cnf = os.path.join(lsf_profile, 'config.yaml')
+        assert os.path.isdir(lsf_profile) and os.path.isfile(lsf_profile_cnf), \
+               'LSF profile does not exist!'
+        with open(lsf_profile_cnf, 'r') as f:
+             lsf_profile_dict = yaml.safe_load(f)
+        conf_ = {k: v for k, v in lsf_profile_dict.items() if k in defaults}
+        conf = deepcopy(conf_)
+    elif use_settings:
+        conf = {}
+
+    if use_settings:
+        conf.update(settings)
+
+    conf['default-resources'] = {}
+    conf['default-resources']['lsf_queue'] = conf.pop('default_queue')
+    conf['default-resources']['lsf_project'] = conf.pop('default_project')
+
+    assert os.path.sep not in profile_name, 'profile name should not be a path'
+    outdir = os.path.join(confdir, profile_name)
+    if os.path.exists(outdir):
+        if not overwrt:
+            raise OutputDirExistsException
+    else:
+        os.mkdir(outdir)
+
+    with open(os.path.join(outdir, 'config.yaml'), 'w') as f:
+        yaml.dump(conf, f, default_flow_style=False)
+
+def install_local8_profile(lsf_profile={}, use_defaults='if_no_lsf',
+                           settings={}, profile_name='local8', overwrt=False):
+    confdir = os.path.expanduser('~/.config/snakemake')
+
+    defaults = {'latency_wait': 10, 'print_shell_commands': True, 'jobs': 1,
+                'software-deployment-method': ['conda', 'singularity']}
+
+    use_defaults = ((use_defaults == 'if_no_lsf' and lsf_profile == '') or
+                    use_defaults is True)
+    
+    assert settings is False or type(settings) is dict, \
+           'settings must be a dictionary'
+    use_settings = len(settings) > 0 and type(settings) is dict
+    assert ((type(settings) is dict and len(settings) > 0)
+            or use_settings is False), 'settings must be a dictionary'
+
+    if use_defaults:
+        conf = deepcopy(defaults)
+    elif lsf_profile:
+        lsf_profile_cnf = os.path.join(lsf_profile, 'config.yaml')
+        assert os.path.isdir(lsf_profile) and os.path.isfile(lsf_profile_cnf), \
+               'LSF profile does not exist!'
+        with open(lsf_profile_cnf, 'r') as f:
+             lsf_profile_dict = yaml.safe_load(f)
+        conf_ = {k: v for k, v in lsf_profile_dict.items() if k in defaults}
+        conf = deepcopy(conf_)
+        conf['jobs'] = '1'
+    elif use_settings:
+        conf = {}
+
+    if use_settings:
+        conf.update(settings)
+
+    assert os.path.sep not in profile_name, 'profile name should not be a path'
+    outdir = os.path.join(confdir, profile_name)
+    if os.path.exists(outdir):
+        if not overwrt:
+            raise OutputDirExistsException
+    else:
+        os.mkdir(outdir)
+
+    with open(os.path.join(outdir, 'config.yaml'), 'w') as f:
+        yaml.dump(conf, f, default_flow_style=False)
+
 
 if __name__ == '__main__':
     confdir = os.path.expanduser('~/.config/snakemake')
@@ -136,6 +231,11 @@ if __name__ == '__main__':
     if not use_click:
         print('Setting up local profile.')
         install_local_profile(lsf_profile=outpath)
+        try:
+            install_lsf8_profile(lsf_profile=outpath)
+            install_local8_profile(lsf_profile=outpath)
+        except:
+            print("Failed to install Snakemake 8 profiles!")
     elif click.confirm('Create local profile?', default=True):
         local_name = click.prompt('Name of the local profile', default='local')
         prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
@@ -143,3 +243,25 @@ if __name__ == '__main__':
             install_local_profile(lsf_profile=outpath, profile_name=local_name)
         else:
             install_local_profile(profile_name=local_name)
+    elif click.confirm('Create Snakemake 8 lsf profile?', default=True):
+        lsf8_name = click.prompt('Name of the local profile', default='lsf8')
+        prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
+        try:
+            if click.confirm(prompt, default=True):
+                install_lsf8_profile(lsf_profile=outpath,
+                                     profile_name=lsf8_name)
+            else:
+                install_lsf8_profile(profile_name=lsf8_name)
+        except:
+            print("Failed to install Snakemake 8 lsf profile!")
+    elif click.confirm('Create Snakemake 8 local profile?', default=True):
+        local_name = click.prompt('Name of the local profile', default='local')
+        prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
+        try:
+            if click.confirm(prompt, default=True):
+                install_local8_profile(lsf_profile=outpath,
+                                       profile_name=local8_name)
+            else:
+                install_local8_profile(profile_name=local8_name)
+        except:
+            print("Failed to install Snakemake 8 lsf profile!")
