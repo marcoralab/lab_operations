@@ -111,7 +111,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   conda activate py$pyversion || source_bashrc
 else
   lcl_pkgs="snakemake=7.32.4 ipython ipdb jupyterlab biopython \
-    visidata flippyr pygit2 vim ipdb \
+    visidata flippyr pygit2 vim \
     tmux wget gh curl gawk sed grep nodejs tqdm"
   # add miller and powerline-status when arm64 supported
   newconda=0
