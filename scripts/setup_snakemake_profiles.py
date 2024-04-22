@@ -64,7 +64,8 @@ def install_local_profile(lsf_profile={}, use_defaults='if_no_lsf',
         with open(lsf_profile_cnf, 'r') as f:
              lsf_profile_dict = yaml.safe_load(f)
         conf_ = {k: v for k, v in lsf_profile_dict.items() if k in defaults}
-        conf = deepcopy(conf_)
+        conf = deepcopy(defaults)
+        conf.update(deepcopy(conf_))
         conf['jobs'] = '1'
     elif use_settings:
         conf = {}
@@ -87,9 +88,9 @@ def install_lsf8_profile(lsf_profile={}, use_defaults='if_no_lsf', project='acc_
                          settings={}, profile_name='lsf8', overwrt=False):
     confdir = os.path.expanduser('~/.config/snakemake')
 
-    defaults = {'max-jobs-per-second': 10, 'max_status_checks_per_second': 1,
-                'wait_between_tries': 0.5, 'latency_wait': 10,
-                'print_shell_commands': True, 'jobs': 2000,
+    defaults = {'max-jobs-per-second': 10, 'max-status-checks-per-second': 1,
+                'wait-between-tries': 0.5, 'latency-wait': 10,
+                'printshellcmds': True, 'jobs': 2000,
                 'software-deployment-method': ['conda', 'singularity'],
                 'executor': 'lsf',
                 'default_queue': 'premium', 'default_project': project}
@@ -112,7 +113,8 @@ def install_lsf8_profile(lsf_profile={}, use_defaults='if_no_lsf', project='acc_
         with open(lsf_profile_cnf, 'r') as f:
              lsf_profile_dict = yaml.safe_load(f)
         conf_ = {k: v for k, v in lsf_profile_dict.items() if k in defaults}
-        conf = deepcopy(conf_)
+        conf = deepcopy(defaults)
+        conf.update(deepcopy(conf_))
     elif use_settings:
         conf = {}
 
@@ -138,7 +140,7 @@ def install_local8_profile(lsf_profile={}, use_defaults='if_no_lsf',
                            settings={}, profile_name='local8', overwrt=False):
     confdir = os.path.expanduser('~/.config/snakemake')
 
-    defaults = {'latency_wait': 10, 'print_shell_commands': True, 'jobs': 1,
+    defaults = {'latency-wait': 10, 'printshellcmds': True, 'jobs': 1,
                 'software-deployment-method': ['conda', 'singularity']}
 
     use_defaults = ((use_defaults == 'if_no_lsf' and lsf_profile == '') or
@@ -159,7 +161,8 @@ def install_local8_profile(lsf_profile={}, use_defaults='if_no_lsf',
         with open(lsf_profile_cnf, 'r') as f:
              lsf_profile_dict = yaml.safe_load(f)
         conf_ = {k: v for k, v in lsf_profile_dict.items() if k in defaults}
-        conf = deepcopy(conf_)
+        conf = deepcopy(defaults)
+        conf.update(deepcopy(conf_))
         conf['jobs'] = '1'
     elif use_settings:
         conf = {}
