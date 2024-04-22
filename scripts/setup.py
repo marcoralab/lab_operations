@@ -237,7 +237,7 @@ assert os.environ['SETUP_SCRIPT'] == '1', 'Run setup.sh instead!'
 for x in ['scripts', 'src', 'bin']: mkdir([home, 'local', x])
 
 path_labops = nicepath([home, 'local', 'src', 'lab_operations'])
-path_rstudio = nicepath([home, 'local', 'src', 'rstudio_server'])
+path_serverscripts = nicepath([home, 'local', 'src', 'minerva_servers'])
 
 update_repository(
     repo_name='Scripts and config files',
@@ -245,9 +245,9 @@ update_repository(
     path=path_labops)
 
 update_repository(
-    repo_name='RStudio script',
-    url='https://github.com/BEFH/rstudio-server-conda.git',
-    path=path_rstudio,
+    repo_name='Server scripts',
+    url='https://github.com/BEFH/minerva_servers.git',
+    path=path_serverscripts,
     branch="master")
 
 # Symlink config files
@@ -330,9 +330,12 @@ Host *
     f_scptlinks = [link_if_absent(src, destdir=[home, 'local', 'scripts'])
                    for src in f_scpt]
 
-    f_rslink = link_if_absent(nicepath([path_rstudio, 'singularity', 'rstudio_minerva']),
+    f_rslink = link_if_absent(nicepath([path_serverscripts, 'rstudio_minerva']),
                               destdir=[home, 'local', 'scripts'])
 
+    f_vsclink = link_if_absent(nicepath([path_serverscripts, 'vscode_minerva']),
+                              destdir=[home, 'local', 'scripts'])
+    
     discrep_srpt = {os.path.basename(x): y for x, y in zip(f_scpt, f_scptlinks)
                     if not compare_paths(x, y)}
 
@@ -425,10 +428,10 @@ else:
     try:
         sp.install_local_profile(lsf_profile=outpath, profile_name="local")
     except sp.OutputDirExistsException:
-        print('"local" lsf profile already exists.')
+        print('"local" profile already exists.')
         mkprompt = 'Continue without creating new local profile?'
         makelocal = not click.confirm(mkprompt, default=True)
-        if makelocal and click.confirm('Overwrite local LSF profile?',
+        if makelocal and click.confirm('Overwrite local profile?',
                                        default=True):
             sp.install_local_profile(lsf_profile=outpath,
                                      profile_name="local",
@@ -438,3 +441,45 @@ else:
             sp.install_local_profile(profile_name=local_name)
     else:
         print("Local profile installed.")
+
+    try:
+        sp.install_lsf8_profile(lsf_profile=outpath,
+                                profile_name="lsf8",
+                                project=proj)
+    except sp.OutputDirExistsException:
+        print('"lsf8" profile already exists.')
+        mkprompt = 'Continue without creating new local profile?'
+        makelocal = not click.confirm(mkprompt, default=True)
+        if makelocal and click.confirm('Overwrite Snakemake 8 LSF profile?',
+                                       default=True):
+            sp.install_lsf8_profile(lsf_profile=outpath,
+                                    project=proj,
+                                    profile_name="local",
+                                    overwrt=True)
+        elif makelocal:
+            lsf8_name = click.prompt('New local profile name:')
+            sp.install_lsf8_profile(profile_name=lsf8_name,
+                                    project=proj)
+    except Exception as e:
+        print("Failed to install Snakemake 8 LSF profile.")
+    else:
+        print("Snakemake 8 LSF profile installed.")
+
+    try:
+        sp.install_local8_profile(lsf_profile=outpath, profile_name="local8")
+    except sp.OutputDirExistsException:
+        print('"local8" profile already exists.')
+        mkprompt = 'Continue without creating new Snakemake 8 local profile?'
+        makelocal = not click.confirm(mkprompt, default=True)
+        if makelocal and click.confirm('Overwrite Snakemake 8 local profile?',
+                                       default=True):
+            sp.install_local8_profile(lsf_profile=outpath,
+                                      profile_name="local8",
+                                      overwrt=True)
+        elif makelocal:
+            local8_name = click.prompt('New local profile name:')
+            sp.install_local8_profile(profile_name=local8_name)
+    except Exception as e:
+        print("Failed to install Snakemake 8 local profile.")
+    else:
+        print("Snakemake 8 local profile installed.")
