@@ -239,7 +239,9 @@ if __name__ == '__main__':
             install_local8_profile(lsf_profile=outpath)
         except:
             print("Failed to install Snakemake 8 profiles!")
-    elif click.confirm('Create local profile?', default=True):
+        exit(0)
+
+    if click.confirm('Create local profile?', default=True):
         try:
             local_name = click.prompt('Name of the local profile', default='local')
             prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
@@ -261,7 +263,8 @@ if __name__ == '__main__':
                 install_local_profile(profile_name=local_name, overwrt=overwrite_local)
         except:
             print("Failed to install Snakemake 7 local profile!")
-    elif click.confirm('Create Snakemake 8 lsf profile?', default=True):
+
+    if click.confirm('Create Snakemake 8 lsf profile?', default=True):
         lsf8_name = click.prompt('Name of the local profile', default='lsf8')
         prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
         try:
@@ -284,7 +287,8 @@ if __name__ == '__main__':
                 install_lsf8_profile(profile_name=lsf8_name, overwrt=overwrite_lsf8)
         except:
             print("Failed to install Snakemake 8 lsf profile!")
-    elif click.confirm('Create Snakemake 8 local profile?', default=True):
+
+    if click.confirm('Create Snakemake 8 local profile?', default=True):
         local8_name = click.prompt('Name of the Snakemake 8 local profile', default='local')
         prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
         try:
