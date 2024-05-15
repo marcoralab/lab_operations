@@ -426,38 +426,40 @@ else:
 
 
     try:
-        sp.install_local_profile(lsf_profile=outpath, profile_name="local")
+        if click.confirm("Install Snakemake 7 local profile?", default=True):
+            sp.install_local_profile(lsf_profile=outpath, profile_name="local")
     except sp.OutputDirExistsException:
-        print('"local" profile already exists.')
+        print('Snakemake 7 "local" profile already exists.')
         mkprompt = 'Continue without creating new local profile?'
         makelocal = not click.confirm(mkprompt, default=True)
-        if makelocal and click.confirm('Overwrite local profile?',
+        if makelocal and click.confirm('Overwrite Snakemake 7 local profile?',
                                        default=True):
             sp.install_local_profile(lsf_profile=outpath,
                                      profile_name="local",
                                      overwrt=True)
         elif makelocal:
-            local_name = click.prompt('New local profile name:')
+            local_name = click.prompt('New Snakemake 7 local profile name:')
             sp.install_local_profile(profile_name=local_name)
     else:
-        print("Local profile installed.")
+        print("Snakemake 7 local profile installed.")
 
     try:
-        sp.install_lsf8_profile(lsf_profile=outpath,
-                                profile_name="lsf8",
-                                project=proj)
+        if click.confirm("Install Snakemake 8 LSF profile?", default=True):
+            sp.install_lsf8_profile(lsf_profile=outpath,
+                                    profile_name="lsf8",
+                                    project=proj)
     except sp.OutputDirExistsException:
-        print('"lsf8" profile already exists.')
-        mkprompt = 'Continue without creating new local profile?'
-        makelocal = not click.confirm(mkprompt, default=True)
-        if makelocal and click.confirm('Overwrite Snakemake 8 LSF profile?',
+        print('Snakemake 8 "lsf8" profile already exists.')
+        mkprompt = 'Continue without creating new Snakemake 8 LSF profile?'
+        makelsf8 = not click.confirm(mkprompt, default=True)
+        if makelsf8 and click.confirm('Overwrite Snakemake 8 LSF profile?',
                                        default=True):
             sp.install_lsf8_profile(lsf_profile=outpath,
                                     project=proj,
                                     profile_name="local",
                                     overwrt=True)
-        elif makelocal:
-            lsf8_name = click.prompt('New local profile name:')
+        elif makelsf8:
+            lsf8_name = click.prompt('New Snakemake 8 LSF profile name:')
             sp.install_lsf8_profile(profile_name=lsf8_name,
                                     project=proj)
     except Exception as e:
@@ -466,9 +468,10 @@ else:
         print("Snakemake 8 LSF profile installed.")
 
     try:
-        sp.install_local8_profile(lsf_profile=outpath, profile_name="local8")
+        if click.confirm("Install Snakemake 8 local profile?", default=True):
+            sp.install_local8_profile(lsf_profile=outpath, profile_name="local8")
     except sp.OutputDirExistsException:
-        print('"local8" profile already exists.')
+        print('Snakemake 8 "local8" profile already exists.')
         mkprompt = 'Continue without creating new Snakemake 8 local profile?'
         makelocal = not click.confirm(mkprompt, default=True)
         if makelocal and click.confirm('Overwrite Snakemake 8 local profile?',

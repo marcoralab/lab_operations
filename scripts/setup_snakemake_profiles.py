@@ -240,31 +240,70 @@ if __name__ == '__main__':
         except:
             print("Failed to install Snakemake 8 profiles!")
     elif click.confirm('Create local profile?', default=True):
-        local_name = click.prompt('Name of the local profile', default='local')
-        prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
-        if click.confirm(prompt, default=True):
-            install_local_profile(lsf_profile=outpath, profile_name=local_name)
-        else:
-            install_local_profile(profile_name=local_name)
+        try:
+            local_name = click.prompt('Name of the local profile', default='local')
+            prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
+            local_uselsf = click.confirm(prompt, default=True)
+            if local_uselsf:
+                install_local_profile(lsf_profile=outpath, profile_name=local_name)
+            else:
+                install_local_profile(profile_name=local_name)
+        except OutputDirExistsException:
+            print('local profile already exists.')
+            overwrite_local = True
+            if not click.confirm('Overwrite local profile?', default=True):
+                local_name = click.prompt('Profile Name:')
+                overwrite_local = False
+            if local_uselsf:
+                install_local_profile(lsf_profile=outpath, profile_name=local_name,
+                                      overwrt=overwrite_local)
+            else:
+                install_local_profile(profile_name=local_name, overwrt=overwrite_local)
+        except:
+            print("Failed to install Snakemake 7 local profile!")
     elif click.confirm('Create Snakemake 8 lsf profile?', default=True):
         lsf8_name = click.prompt('Name of the local profile', default='lsf8')
         prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
         try:
-            if click.confirm(prompt, default=True):
+            lsf8_uselsf = click.confirm(prompt, default=True)
+            if lsf8_uselsf:
                 install_lsf8_profile(lsf_profile=outpath,
                                      profile_name=lsf8_name)
             else:
                 install_lsf8_profile(profile_name=lsf8_name)
+        except OutputDirExistsException:
+            print('LSF Snakemake 8 profile already exists.')
+            overwrite_lsf8 = True
+            if not click.confirm('Overwrite LSF Snakemake 8 profile?', default=True):
+                lsf8_name = click.prompt('Profile Name:')
+                overwrite_lsf8 = False
+            if lsf8_uselsf:
+                install_lsf8_profile(lsf_profile=outpath, profile_name=lsf8_name,
+                                     overwrt=overwrite_lsf8)
+            else:
+                install_lsf8_profile(profile_name=lsf8_name, overwrt=overwrite_lsf8)
         except:
             print("Failed to install Snakemake 8 lsf profile!")
     elif click.confirm('Create Snakemake 8 local profile?', default=True):
-        local_name = click.prompt('Name of the local profile', default='local')
+        local8_name = click.prompt('Name of the Snakemake 8 local profile', default='local')
         prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
         try:
-            if click.confirm(prompt, default=True):
+            local8_uselsf = click.confirm(prompt, default=True)
+            if local8_uselsf:
                 install_local8_profile(lsf_profile=outpath,
                                        profile_name=local8_name)
             else:
                 install_local8_profile(profile_name=local8_name)
+        except OutputDirExistsException:
+            print('Snakemake 8 local profile already exists.')
+            overwrite_local8 = True
+            if not click.confirm('Overwrite Snakemake 8 local profile?', default=True):
+                local8_name = click.prompt('Profile Name:')
+                overwrite_local8 = False
+            if local8_uselsf:
+                install_local8_profile(lsf_profile=outpath, profile_name=local8_name,
+                                       overwrt=overwrite_local8)
+            else:
+                install_local8_profile(profile_name=local8_name, overwrt=overwrite_local8)
         except:
-            print("Failed to install Snakemake 8 lsf profile!")
+            print("Failed to install Snakemake 8 local profile!")
