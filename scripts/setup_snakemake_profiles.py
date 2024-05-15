@@ -289,7 +289,7 @@ if __name__ == '__main__':
             print("Failed to install Snakemake 8 lsf profile!")
 
     if click.confirm('Create Snakemake 8 local profile?', default=True):
-        local8_name = click.prompt('Name of the Snakemake 8 local profile', default='local')
+        local8_name = click.prompt('Name of the Snakemake 8 local profile', default='local8')
         prompt = 'Use settings from lsf profile? Will use defaults otherwise.'
         try:
             local8_uselsf = click.confirm(prompt, default=True)
