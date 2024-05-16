@@ -91,7 +91,7 @@ def install_lsf8_profile(lsf_profile={}, use_defaults='if_no_lsf', project='acc_
     defaults = {'max-jobs-per-second': 10, 'max-status-checks-per-second': 1,
                 'wait-between-tries': 0.5, 'latency-wait': 10,
                 'printshellcmds': True, 'jobs': 2000,
-                'software-deployment-method': ['conda', 'singularity'],
+                'software-deployment-method': ['conda', 'apptainer'],
                 'executor': 'lsf',
                 'default_queue': 'premium', 'default_project': project}
 
@@ -141,7 +141,7 @@ def install_local8_profile(lsf_profile={}, use_defaults='if_no_lsf',
     confdir = os.path.expanduser('~/.config/snakemake')
 
     defaults = {'latency-wait': 10, 'printshellcmds': True, 'jobs': 1,
-                'software-deployment-method': ['conda', 'singularity']}
+                'software-deployment-method': ['conda', 'apptainer']}
 
     use_defaults = ((use_defaults == 'if_no_lsf' and lsf_profile == '') or
                     use_defaults is True)
