@@ -15,7 +15,7 @@ def install_lsf_profile(use_defaults=False, project='acc_LOAD',
     defaults = {'LSF_UNIT_FOR_LIMITS': 'MB', 'default_mem_mb': 4096,
                 'default_queue': 'premium', 'default_project': project,
                 'max-jobs-per-second': 5, 'max_status_checks_per_second': 5,
-                'max_status_checks': 5, 'wait_between_tries': 0.5,
+                'max_status_checks': 5, 'seconds_between_status_checks': 0.5,
                 'latency_wait': 10, 'use_conda': True, 'use_singularity': True,
                 'print_shell_commands': True, 'jobs': 2000,
                 'profile_name': p_name}
@@ -89,8 +89,7 @@ def install_lsf8_profile(lsf_profile={}, use_defaults='if_no_lsf', project='acc_
     confdir = os.path.expanduser('~/.config/snakemake')
 
     defaults = {'max-jobs-per-second': 10, 'max-status-checks-per-second': 1,
-                'wait-between-tries': 0.5, 'latency-wait': 10,
-                'printshellcmds': True, 'jobs': 2000,
+                'latency-wait': 10, 'printshellcmds': True, 'jobs': 2000,
                 'software-deployment-method': ['conda', 'apptainer'],
                 'executor': 'lsf',
                 'default_queue': 'premium', 'default_project': project}
