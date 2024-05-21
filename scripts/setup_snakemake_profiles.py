@@ -15,8 +15,9 @@ def install_lsf_profile(use_defaults=False, project='acc_LOAD',
     defaults = {'LSF_UNIT_FOR_LIMITS': 'MB', 'default_mem_mb': 4096,
                 'default_queue': 'premium', 'default_project': project,
                 'max-jobs-per-second': 5, 'max_status_checks_per_second': 5,
-                'max_status_checks': 5, 'seconds_between_status_checks': 0.5,
-                'latency_wait': 10, 'use_conda': True, 'use_singularity': True,
+                'max_status_checks': 10, 'seconds_between_status_checks': 0.5,
+                'wait_between_tries': 2, 'latency_wait': 10,
+                'use_conda': True, 'use_singularity': True,
                 'print_shell_commands': True, 'jobs': 2000,
                 'profile_name': p_name}
     
