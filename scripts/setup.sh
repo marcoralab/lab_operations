@@ -5,6 +5,7 @@ pyversion="3.10"
 rversion="4.3"
 
 export MAMBA_NO_BANNER=1
+windows=0
 
 shelltype=$(basename $SHELL)
 echo "Using $shelltype"
@@ -125,13 +126,20 @@ else
     bash $conda_inst -b
     rm $conda_inst
     $HOME/mambaforge/bin/conda init $shelltype
-    if [[ $SHELLCONF == "other" ]]; then
+    $HOME/mambaforge/bin/mamba init $shelltype
+    if [[ $shelltype == "other" ]]; then
       echo "Unknown shell. Please rerun this script to continue."
       exit 1
-    elif [[ $SHELLCONF == "bash" ]]; then
-      source $SHELLCONF
+    elif [[ $shelltype == "bash" ]]; then
+      if [ -z ${WSL_DISTRO_NAME+x} ]; then
+        source $SHELLCONF
+      else
+        windows=1
+        source "$HOME/mambaforge/etc/profile.d/conda.sh"
+      fi
     else
       $HOME/mambaforge/bin/conda init bash
+      $HOME/mambaforge/bin/mamba init bash
       source $HOME/.bash_profile
     fi
     mamba update -y mamba conda
@@ -161,7 +169,12 @@ echo Starting python install script
 export SETUP_SCRIPT=1
 
 curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.py > setup_lab.py
-python3 setup_lab.py || echo Main setup script failed. Please tell Brian.
+if [[ $windows -eq 1 ]]; then
+  $(dirname $CONDA_EXE)/python3 setup_lab.py || \
+    echo Main setup script failed. Please tell Brian.
+else
+  python3 setup_lab.py || echo Main setup script failed. Please tell Brian.
+fi
 rm setup_lab.py
 
 if [[ $minerva -eq 1 ]]; then
@@ -175,4 +188,8 @@ if [[ $minerva -eq 1 ]]; then
   fi
 fi
 
-echo "Run \"source $SHELLCONF\" to activate changes."
+if [[ $windows -eq 1 ]]; then
+  echo "Run \"source .bashrc\" to activate changes."
+else
+  echo "Run \"source $SHELLCONF\" to activate changes."
+fi
