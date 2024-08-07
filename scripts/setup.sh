@@ -111,8 +111,8 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   fi
   conda activate py$pyversion || source_bashrc
 else
-  lcl_pkgs="snakemake=7.32.4 ipython ipdb jupyterlab biopython \
-    visidata flippyr pygit2 vim \
+  lcl_pkgs="snakemake=7.32.4 ipython jupyterlab biopython \
+    visidata flippyr pygit2 vim ipdb \
     tmux wget gh curl gawk sed grep nodejs tqdm"
   # add miller and powerline-status when arm64 supported
   newconda=0
@@ -143,7 +143,9 @@ else
       source $HOME/.bash_profile
     fi
     mamba update -y mamba conda
+    set +u
     mamba install -y python=$pyversion $lcl_pkgs
+    set -u
   fi
 
   if [[ $newconda -eq 0 ]]; then
@@ -159,7 +161,7 @@ else
     mamba update -y $lcl_pkgs -c conda-forge
   fi
 
-  if ! mamba activate &> /dev/null; then
+  if [[ $newconda -ne 0 ]] || ! mamba activate &> /dev/null; then
     mamba init
     mamba init $shelltype
   fi
