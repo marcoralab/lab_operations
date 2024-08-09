@@ -98,7 +98,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
     mamba create -y -n py$pyversion python=$pyversion snakemake=7.32.4 ipython ipdb \
       jupyterlab biopython visidata miller flippyr gh git vim pygit2 tmux \
       htop powerline-status click cookiecutter squashfs-tools radian \
-      r-base=$rversion r-essentials r-languageserver tqdm r-httpgd
+      r-base=$rversion r-essentials r-languageserver tqdm # r-httpgd
   fi
 
   if [[ "$shelltype" == "bash" ]]; then
