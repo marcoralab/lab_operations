@@ -29,6 +29,13 @@ source_bashrc() {
 minerva=0
 
 if echo $HOME | grep -q "^/hpc/users/"; then
+  if [ -z "${LSB_JOBID}" ]; then
+    echo please run the following:
+    echo ml proxies
+    echo "bsub -P acc_LOAD -q premium -R span[hosts=1] -R rusage[mem=16000] -W 24 -n 1 -Is $SHELL"
+    echo "bash <(curl -s https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.sh)"
+    exit 1
+  fi
   minerva=1
   echo Downloading .condarc to home direcctory
   curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/.condarc > $HOME/.condarc 2> /dev/null
@@ -173,6 +180,9 @@ export SETUP_SCRIPT=1
 curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/setup.py > setup_lab.py
 if [[ $windows -eq 1 ]]; then
   $(dirname $CONDA_EXE)/python3 setup_lab.py || \
+    echo Main setup script failed. Please tell Brian.
+elif [[ $minerva -eq 1 ]]; then
+  ssh -t li03c02 "bash -lc \"SETUP_SCRIPT=1 python3 $PWD/setup_lab.py\"" || \
     echo Main setup script failed. Please tell Brian.
 else
   python3 setup_lab.py || echo Main setup script failed. Please tell Brian.
