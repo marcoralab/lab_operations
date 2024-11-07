@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail # STRICT MODE
-pyversion="3.12"
+pyversion="3.11"
 rversion="4.4"
 
 export MAMBA_NO_BANNER=1
