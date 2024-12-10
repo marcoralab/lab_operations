@@ -335,8 +335,12 @@ Host *
 
     f_vsclink = link_if_absent(nicepath([path_serverscripts, 'vscode_minerva']),
                               destdir=[home, 'local', 'scripts'])
-    
-    discrep_srpt = {os.path.basename(x): y for x, y in zip(f_scpt, f_scptlinks)
+
+    f_scptlinks_sub = [re.sub("^\.\.", nicepath([home, "local"]), x)
+                       for x in f_scptlinks]
+
+    discrep_srpt = {os.path.basename(x): y
+                    for x, y in zip(f_scpt, f_scptlinks_sub)
                     if not compare_paths(x, y)}
 
     if len(discrep_srpt) > 0:
