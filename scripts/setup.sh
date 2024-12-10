@@ -47,9 +47,9 @@ if echo $HOME | grep -q "^/hpc/users/"; then
   newconda=0
   if ! conda --help &> /dev/null; then
     export newconda=1
-    echo Installing conda and mamba using Mambaforge
-    conda_prefix="/sc/arion/work/$USER/conda/mambaforge"
-    conda_inst=Mambaforge-$(uname)-$(uname -m).sh
+    echo Installing conda and mamba using Miniforge
+    conda_prefix="/sc/arion/work/$USER/conda/miniforge3"
+    conda_inst=Miniforge3-$(uname)-$(uname -m).sh
     curl -L "https://github.com/conda-forge/miniforge/releases/latest/download/$conda_inst" > $conda_inst
     bash $conda_inst -bp $conda_prefix
     rm $conda_inst
@@ -74,7 +74,7 @@ if echo $HOME | grep -q "^/hpc/users/"; then
       $conda_prefix/bin/conda init bash
       source_bashrc
     fi
-    echo Done installing Mambaforge
+    echo Done installing Miniforge
   elif [ -n "${CONDA_PREFIX+x}" ]; then
     source_bashrc
     set +u
@@ -96,8 +96,12 @@ if echo $HOME | grep -q "^/hpc/users/"; then
 
   if ! mamba activate &> /dev/null; then
     echo Initializing mamba
-    mamba init
-    mamba init $shelltype
+    if mamba init; then
+      mamba init $shelltype
+    else
+      mamba shell init
+      mamba shell init $shelltype
+    fi
   fi
 
   if ! conda env list | grep -qE "^py$pyversion\s+"; then
@@ -128,12 +132,15 @@ else
     echo Downloading .condarc to home direcctory
     curl https://raw.githubusercontent.com/marcoralab/lab_operations/main/config_files/local.condarc > $HOME/.condarc 2> /dev/null
     echo Ensuring conda and mamba are installed and updated
-    conda_inst=Mambaforge-$(uname)-$(uname -m).sh
+    conda_inst=Miniforge3-$(uname)-$(uname -m).sh
     curl -L "https://github.com/conda-forge/miniforge/releases/latest/download/$conda_inst" > $conda_inst
     bash $conda_inst -b
     rm $conda_inst
-    $HOME/mambaforge/bin/conda init $shelltype
-    $HOME/mambaforge/bin/mamba init $shelltype
+    $HOME/miniforge3/bin/conda init $shelltype
+
+    if ! $HOME/miniforge3/bin/mamba init $shelltype; then
+      $HOME/miniforge3/bin/mamba shell init $shelltype
+    fi
     if [[ $shelltype == "other" ]]; then
       echo "Unknown shell. Please rerun this script to continue."
       exit 1
@@ -142,11 +149,13 @@ else
         source $SHELLCONF
       else
         windows=1
-        source "$HOME/mambaforge/etc/profile.d/conda.sh"
+        source "$HOME/miniforge3/etc/profile.d/conda.sh"
       fi
     else
-      $HOME/mambaforge/bin/conda init bash
-      $HOME/mambaforge/bin/mamba init bash
+      $HOME/miniforge3/bin/conda init bash
+      if ! $HOME/miniforge3/bin/mamba init bash; then
+        $HOME/miniforge3/bin/mamba shell init bash
+      fi
       source $HOME/.bash_profile
     fi
     mamba update -y mamba conda
@@ -161,16 +170,21 @@ else
     fi
     if ! mamba --help &> /dev/null; then
       conda install -y mamba
-      mamba clean --index-cache -y
     fi
+    mamba clean --index-cache -y
     mamba update -y mamba conda
     mamba install -y $lcl_pkgs -c conda-forge
     mamba update -y $lcl_pkgs -c conda-forge
   fi
 
-  if [[ $newconda -ne 0 ]] || ! mamba activate &> /dev/null; then
-    mamba init
-    mamba init $shelltype
+  if [[ $newconda -eq 0 ]] && ! mamba activate &> /dev/null && grep -qv "profile.d/mamba.sh" ~/.bash_profile; then
+    echo Initializing mamba
+    if mamba init; then
+      mamba init $shelltype
+    else
+      mamba shell init
+      mamba shell init $shelltype
+    fi
   fi
 fi
 
@@ -192,11 +206,11 @@ rm setup_lab.py
 if [[ $minerva -eq 1 ]]; then
   if ! grep -q singularity $SHELLCONF; then
     echo "Adding Singularity to $shelltype configuration ($SHELLCONF)"
-    echo "ml singularity/3.6.4 2> /dev/null" >> $SHELLCONF
+    echo "ml apptainer/1.2.5 2> /dev/null" >> $SHELLCONF
   fi
   if ! grep -q singularity ~/.bashrc; then
     echo "Adding Singularity to .bashrc"
-    echo "ml singularity/3.6.4 2> /dev/null" >> ~/.bashrc
+    echo "ml apptainer/1.2.5 2> /dev/null" >> ~/.bashrc
   fi
 fi
 
