@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-import importlib
+import importlib.util
 import shutil
 import subprocess
 import pygit2

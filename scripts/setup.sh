@@ -196,7 +196,7 @@ if [[ $windows -eq 1 ]]; then
   $(dirname $CONDA_EXE)/python3 setup_lab.py || \
     echo Main setup script failed. Please tell Brian.
 elif [[ $minerva -eq 1 ]]; then
-  ssh -t li03c02 "bash -lc \"SETUP_SCRIPT=1 python3 $PWD/setup_lab.py\"" || \
+  ssh -t li04e02 "bash -lc \"SETUP_SCRIPT=1 python3 $PWD/setup_lab.py\"" || \
     echo Main setup script failed. Please tell Brian.
 else
   python3 setup_lab.py || echo Main setup script failed. Please tell Brian.
