@@ -212,6 +212,24 @@ if [[ $minerva -eq 1 ]]; then
     echo "Adding Singularity to .bashrc"
     echo "ml apptainer/1.2.5 2> /dev/null" >> ~/.bashrc
   fi
+  ml -q singularity singularity-ce &>/dev/null && ml -singularity -singularity-ce
+  ml apptainer/1.2.5
+  
+  set +u +e +o pipefail
+  sycloud_added=false
+  if ! apptainer remote list | grep -q '^SylabsCloud'; then
+    echo "SylabsCloud remote not found, adding it now"
+    apptainer remote add --no-login SylabsCloud cloud.sycloud.io
+    sycloud_added=true
+  fi
+  
+  if ! apptainer remote list | grep -E -q '^SylabsCloud\s+(\w|\.)+\s+YES'; then
+    if [[ $sycloud_added == "false" ]]; then
+      echo "SylabsCloud remote not activated, activating it now"
+    fi
+    apptainer remote use SylabsCloud
+  fi
+  set -euo pipefail
 fi
 
 if [[ $windows -eq 1 ]]; then

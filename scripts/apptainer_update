@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-#strict mode
-set -euo pipefail
 
 if [[ "$SHELL" == /bin/bash ]]; then
   read -p "Do you want to switch to apptainer in bashrc? [y/N] " -n 1 -r
@@ -23,6 +21,7 @@ fi
 ml -q singularity singularity-ce &>/dev/null && ml -singularity -singularity-ce
 ml apptainer/1.2.5
 
+set +u +e +o pipefail
 sycloud_added=false
 if ! apptainer remote list | grep -q '^SylabsCloud'; then
   echo "SylabsCloud remote not found, adding it now"
