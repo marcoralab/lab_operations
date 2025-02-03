@@ -18,10 +18,14 @@ if [[ "$SHELL" == /bin/bash ]]; then
   else
     echo "Invalid input"
   fi
+fi
 
 ml -singularity -singularity-ce apptainer/1.2.5
 
-apptainer remote add --no-login SylabsCloud cloud.sycloud.io
+if ! apptainer remote list | grep -q SylabsCloud; then
+  echo "SylabsCloud remote not found, adding it now"
+  apptainer remote add --no-login SylabsCloud cloud.sycloud.io
+fi
 apptainer remote use SylabsCloud
 
 echo "Apptainer has been configured to use the SylabsCloud remote"
