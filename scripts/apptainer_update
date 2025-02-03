@@ -20,12 +20,21 @@ if [[ "$SHELL" == /bin/bash ]]; then
   fi
 fi
 
-ml -singularity -singularity-ce apptainer/1.2.5
+ml -q singularity singularity-ce &>/dev/null && ml -singularity -singularity-ce
+ml apptainer/1.2.5
 
-if ! apptainer remote list | grep -q SylabsCloud; then
+sycloud_added=false
+if ! apptainer remote list | grep -q '^SylabsCloud'; then
   echo "SylabsCloud remote not found, adding it now"
   apptainer remote add --no-login SylabsCloud cloud.sycloud.io
+  sycloud_added=true
 fi
-apptainer remote use SylabsCloud
+
+if ! apptainer remote list | grep -E -q '^SylabsCloud\s+(\w|\.)+\s+YES'; then
+  if [[ $sycloud_added == "false" ]]; then
+    echo "SylabsCloud remote not activated, activating it now"
+  fi
+  apptainer remote use SylabsCloud
+fi
 
 echo "Apptainer has been configured to use the SylabsCloud remote"
