@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-if [[ "$SHELL" == /bin/bash ]]; then
-  read -p "Do you want to switch to apptainer in bashrc? [y/N] " -n 1 -r
+if grep -q "^ml singularity" ~/.bashrc ~/.bash_profile; then
+  read -p "Do you want to switch to apptainer in ~/.bashrc? [y/N] " -n 1 -r
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     sed -i '/^ml singularity\//d' ~/.bashrc ~/.bash_profile
     sed -i '/^ml apptainer\//d' ~/.bashrc ~/.bash_profile
@@ -16,6 +16,17 @@ if [[ "$SHELL" == /bin/bash ]]; then
   else
     echo "Invalid input"
   fi
+elif ! grep -q "^ml apptainer" ~/.bashrc ~/.bash_profile; then
+  echo "ml apptainer/1.2.5 2> /dev/null" >> ~/.bashrc
+  echo "Added apptainer to ~/.bashrc"
+else
+  echo "Apptainer is already configured in ~/.bashrc"
+fi
+
+if [[ $SHELL != "/bin/bash" ]]; then
+  echo "Apptainer is only configured for bash shells"
+  echo "To configure apptainer for other shells, add the following to your shell's configuration file:"
+  echo "ml apptainer/1.2.5 2> /dev/null"
 fi
 
 ml -q singularity singularity-ce &>/dev/null && ml -singularity -singularity-ce
