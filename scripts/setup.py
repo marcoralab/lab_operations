@@ -24,12 +24,18 @@ def octal_to_string(octal):
                 result += '-'
     return result
 
-def nicepath(path):
+def nicepath(path, *args):
     if type(path) in [str, pathlib.PosixPath]:
         path = [path]
+    if args:
+        path += args
     return os.path.join(*[os.path.normpath(x) for x in path])
 
-def mkdir(path, **kwargs):
+def mkdir(path, *args, **kwargs):
+    if type(path) in [str, pathlib.PosixPath]:
+        path = [path]
+    if args:
+        path += args
     path = nicepath(path)
     mkdirkwargs = {k: v for k, v in kwargs.items() if k != 'fixperms'}
     valid_modes = [0o500, 0o510, 0o511, 0o550, 0o551, 0o555,
@@ -55,8 +61,8 @@ def get_os_type():
     return name
 
 def make_keys(home, overwrite=False):
-    f_elyptic = nicepath([home, '.ssh/id_ed25519'])
-    f_rsa = nicepath([home, '.ssh/id_rsa'])
+    f_elyptic = nicepath(home, '.ssh/id_ed25519')
+    f_rsa = nicepath(home, '.ssh/id_rsa')
 
     if ((overwrite or not os.path.isfile(f_rsa))
             and not os.path.isfile(f_elyptic)):
@@ -84,9 +90,9 @@ def link_if_absent(src, dst=None, destdir=None):
     if destdir is not None:
         destdir = nicepath(destdir)
         if dst is None:
-            dst = nicepath([destdir, os.path.basename(src)])
+            dst = nicepath(destdir, os.path.basename(src))
         else:
-            dst = nicepath([destdir, dst])
+            dst = nicepath(destdir, dst)
     dst = nicepath(dst)
     dir = os.path.dirname(dst)
     assert os.path.exists(src), 'Source does not exist!'
@@ -234,10 +240,10 @@ isminerva = bool(re.search("hpc", home))
 assert 'SETUP_SCRIPT' in os.environ.keys(), 'Run setup.sh instead!'
 assert os.environ['SETUP_SCRIPT'] == '1', 'Run setup.sh instead!'
 
-for x in ['scripts', 'src', 'bin']: mkdir([home, 'local', x])
+for x in ['scripts', 'src', 'bin']: mkdir(home, 'local', x)
 
-path_labops = nicepath([home, 'local', 'src', 'lab_operations'])
-path_serverscripts = nicepath([home, 'local', 'src', 'minerva_servers'])
+path_labops = nicepath(home, 'local', 'src', 'lab_operations')
+path_serverscripts = nicepath(home, 'local', 'src', 'minerva_servers')
 
 update_repository(
     repo_name='Scripts and config files',
@@ -263,23 +269,23 @@ discrep_conf = {os.path.basename(x): y for x, y in zip(f_conf, f_conflinks)
 if len(discrep_conf) > 0:
     for f, realpath in discrep_conf.items():
         print(f'Warning: The config file {f} does not point to the lab repo.')
-        if realpath == nicepath([home, f]):
+        if realpath == nicepath(home, f):
             print('         It is a file in your home directory\n')
         else:
             print('         It points to the following file:')
             print(f'         {realpath}\n')
 
-scriptdir = nicepath([home, 'local', 'scripts'])
-bindir = nicepath([home, 'local', 'bin'])
-scriptdir_team = nicepath(['/sc/arion/projects/load', 'scripts'])
+scriptdir = nicepath(home, 'local', 'scripts')
+bindir = nicepath(home, 'local', 'bin')
+scriptdir_team = nicepath('/sc/arion/projects/load', 'scripts')
 
 if not scriptdir in os.environ['PATH'].split(':'):
     if shell == 'fish':
-        shell_conf = nicepath([home, '.config', 'fish', 'config.fish'])
+        shell_conf = nicepath(home, '.config', 'fish', 'config.fish')
     elif shell == 'bash':
-        shell_conf = nicepath([home, '.bashrc'])
+        shell_conf = nicepath(home, '.bashrc')
     elif shell == 'zsh':
-        shell_conf = nicepath([home, '.zshrc'])
+        shell_conf = nicepath(home, '.zshrc')
     else:
         shell_conf = input("Enter absolute path to your shell config file:")
 
@@ -295,11 +301,11 @@ if not scriptdir in os.environ['PATH'].split(':'):
             if isminerva:
                 f.write(f'\nexport PATH="{scriptdir_team}:$PATH"\n')
 
-mkdir([home, '.ssh'], mode=0o700)
+mkdir(home, '.ssh', mode=0o700)
 
 if not isminerva:
-    mkdir([home, '.ssh', 'cm_socket'], mode=0o700)
-    configpath = nicepath([home, '.ssh', 'config'])
+    mkdir(home, '.ssh', 'cm_socket', mode=0o700)
+    configpath = nicepath(home, '.ssh', 'config')
     minerva_username = input("Enter minerva username: ")
     ssh_config = '''Host minerva
   HostName minerva12.hpc.mssm.edu
@@ -330,13 +336,13 @@ Host *
     f_scptlinks = [link_if_absent(src, destdir=[home, 'local', 'scripts'])
                    for src in f_scpt]
 
-    f_rslink = link_if_absent(nicepath([path_serverscripts, 'rstudio_minerva']),
+    f_rslink = link_if_absent(nicepath(path_serverscripts, 'rstudio_minerva'),
                               destdir=[home, 'local', 'scripts'])
 
-    f_vsclink = link_if_absent(nicepath([path_serverscripts, 'vscode_minerva']),
+    f_vsclink = link_if_absent(nicepath(path_serverscripts, 'vscode_minerva'),
                               destdir=[home, 'local', 'scripts'])
 
-    f_scptlinks_sub = [re.sub("^\.\.", nicepath([home, "local"]), x)
+    f_scptlinks_sub = [re.sub("^\.\.", nicepath(home, "local"), x)
                        for x in f_scptlinks]
 
     discrep_srpt = {os.path.basename(x): y
@@ -346,7 +352,7 @@ Host *
     if len(discrep_srpt) > 0:
         for f, realpath in discrep_srpt.items():
             print(f'Warning: The script {f} does not point to the lab repo.')
-            if realpath == nicepath([home, f]):
+            if realpath == nicepath(home, f):
                 print('         It is a file in your script directory\n')
             else:
                 print('         It points to the following file:')
@@ -377,8 +383,8 @@ else:
 
     print('installing LSF profile for snakemake')
     # load in profile script as a module
-    profscript = nicepath([home, 'local', 'src', 'lab_operations',
-                           'scripts', 'setup_snakemake_profiles.py'])
+    profscript = nicepath(home, 'local', 'src', 'lab_operations',
+                          'scripts', 'setup_snakemake_profiles.py')
     spec = importlib.util.spec_from_file_location('snakeprofile', profscript)
     sp = importlib.util.module_from_spec(spec)
     sys.modules['snakeprofile'] = sp
