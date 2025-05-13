@@ -41,16 +41,6 @@ usr = os.getlogin()
 hname = socket.getfqdn()
 hname_short = hname.split(".")[0]
 
-hdir = os.path.expanduser("~")
-sshdir = nicepath(hdir, ".ssh")
-mkdir(sshdir, mode=0o700)
-keyfile = nicepath(sshdir, "id_ed25519")
-sshcmd = f'ssh {locfwd} {usr}@{hname} -fNT'
-if not os.path.exists(keyfile):
-    print("Elyptic key does not yet exist. Creating it now.")
-cmd_elyptickey = ('ssh-keygen -t ed25519 -a 100 '
-                  f'-f ~/.ssh/id_ed25519 -P ""')
-
 print('Please run the following command where you will be accessing this computer to complete setup:')
 print(f'''python3 <(curl -s https://raw.githubusercontent.com/marcoralab/lab_operations/main/scripts/screenshare_client) {hname_short} {usr} {hname}''')
 print(f'\nYou can replace {hname_short} with a descriptive name for this computer')

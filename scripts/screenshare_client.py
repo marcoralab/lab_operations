@@ -164,7 +164,7 @@ assert r.returncode == 0, 'Error copying elyptic key to remote server'
 
 ## Download screenshare app
 
-app_url = "https://raw.githubusercontent.com/marcoralab/lab_operations/refs/heads/main/scripts/launch_screenshare.app"
+app_url = "https://raw.githubusercontent.com/marcoralab/lab_operations/refs/heads/main/scripts/launch_screenshare.zip"
 app_path = nicepath(hdir, "Applications")
 download_path = nicepath(hdir, "Downloads", "launch_screenshare.zip")
 urllib.request.urlretrieve(app_url, download_path)
@@ -203,7 +203,7 @@ function {zsh_func_name}() {{
     return 1
   fi
   read -r sname port usr hname <<< "$line"
-  ssh -L ${{port}}:localhost:5900 ${{usr}}@${{hname}} -fNT
+  ssh -L ${{port}}:localhost:5900 "${{usr}}@${{hname}}" -fNT
   open vnc://localhost:${{port}}
 }}
 # END {zsh_func_name}
