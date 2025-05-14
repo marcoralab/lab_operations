@@ -179,17 +179,15 @@ function {zsh_func_name}() {{
 '''
 
 zshrc_path = os.path.expanduser("~/.zshrc")
-backup_path = zshrc_path + ".bak"
 
 # Read existing zshrc
 if os.path.exists(zshrc_path):
+    backup_path = zshrc_path + ".bak"
+    shutil.copy2(zshrc_path, backup_path)
     with open(zshrc_path, "r") as f:
         zshrc_lines = f.read()
 else:
     zshrc_lines = ""
-
-# Backup .zshrc
-shutil.copy2(zshrc_path, backup_path)
 
 # Replace existing block if present, else append
 if f"# BEGIN {zsh_func_name}" in zshrc_lines and f"# END {zsh_func_name}" in zshrc_lines:
