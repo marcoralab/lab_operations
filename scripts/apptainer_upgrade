@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#strict mode
+set -euo pipefail
+
+if [[ "$SHELL" == /bin/bash ]]; then
+  read -p "Do you want to switch to apptainer in bashrc? [y/N] " -n 1 -r
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    sed -i '/^ml singularity\//d' ~/.bashrc ~/.bash_profile
+    sed -i '/^ml apptainer\//d' ~/.bashrc ~/.bash_profile
+    echo >> ~/.bashrc
+    echo "ml apptainer/1.2.5 2> /dev/null" >> ~/.bashrc
+    echo "Switched to apptainer in bashrc"
+  elif [[ $REPLY =~ ^[Nn]$ || -z $REPLY ]]; then
+    echo "Not switching to apptainer in ~/.bashrc"
+    echo "To switch to apptainer in bashrc, add the folowing to your ~/.bashrc:"
+    echo "ml apptainer/1.2.5 2> /dev/null"
+    echo "And remove any existing ml singularity/ lines from ~/.bashrc and ~/.bash_profile"
+  else
+    echo "Invalid input"
+  fi
+
+ml -singularity -singularity-ce apptainer/1.2.5
+
+apptainer remote add --no-login SylabsCloud cloud.sycloud.io
+apptainer remote use SylabsCloud
+
+echo "Apptainer has been configured to use the SylabsCloud remote"
