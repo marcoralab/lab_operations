@@ -78,37 +78,6 @@ else:
 
 hdir = os.path.expanduser("~")
 
-## Read config, set local port, and write config
-
-# file_conf = nicepath(hdir, ".screenshare.hosts")
-# confcols = ["sname", "port", "usr", "hname"]
-# if os.path.exists(file_conf):
-#     conf = pd.read_csv(file_conf, sep=" ", header=None, names=confcols)
-#     nrow_conf = len(conf)
-#     if sname in conf["sname"]:
-#         response = input(f"{sname} already in config. Overwrite (y/N)")
-#         if response.lower() in ["y", "yes"]:
-#             conf.loc[conf['sname'] == sname, "usr"] = usr
-#             conf.loc[conf['sname'] == sname, "hname"] = hname
-#             port = int(conf.loc[conf['sname'] == sname, "port"].values[0])
-#         elif response.lower() in ["n", "no", ""]:
-#             print("Keeping current config.")
-#             sys.exit(1)
-#         else:
-#             print("Response not recognized. Exiting.")
-#             sys.exit(1)
-#     else:
-#         port = int(max(conf["port"])) + 1
-#         conf_new = pd.DataFrame([[sname, port, usr, hname]], columns=confcols)
-#         conf = pd.concat([conf, conf_new], ignore_index=True)
-# else:
-#     port = 5901
-#     conf = pd.DataFrame([[sname, port, usr, hname]], columns=confcols)
-#     nrow_conf = 1
-# 
-# conf.to_csv(file_conf, sep=" ", header=None, index=False)
-
-
 file_conf = nicepath(hdir, ".screenshare.hosts")
 confcols = ["sname", "port", "usr", "hname"]
 conf = []

@@ -7,6 +7,9 @@ import subprocess
 
 # from https://gist.github.com/mhofman/171539fa11052aae785fd19d8b382664
 
+ret = subprocess.run(["open", '"x-apple.systempreferences:com.apple.preferences.sharing"'])
+ans = input("Please enable screen sharing and remote access then press Enter to continue...")
+
 orig_file = '/System/Library/LaunchDaemons/com.apple.screensharing.plist'
 targ_file = '/Library/LaunchDaemons/com.apple.screensharing.plist'
 launch_file = '/Library/LaunchDaemons/com.apple.screensharing.launcher.plist'
