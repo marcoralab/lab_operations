@@ -135,6 +135,8 @@ assert r.returncode == 0, 'Error copying elyptic key to remote server'
 
 app_url = "https://raw.githubusercontent.com/marcoralab/lab_operations/refs/heads/main/scripts/launch_screenshare.zip"
 app_path = nicepath(hdir, "Applications")
+if not os.path.exists(app_path):
+    mkdir(app_path)
 download_path = nicepath(hdir, "Downloads", "launch_screenshare.zip")
 urllib.request.urlretrieve(app_url, download_path)
 cmd_unzip = f'unzip -d {app_path} {download_path}'
