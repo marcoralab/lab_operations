@@ -42,7 +42,7 @@ sudo sysadminctl -addUser "$USERNAME_" \
 
 # Create and set ownership of the home directory
 sudo mkdir -p "$HOMEDIR"
-sudo chown "$USERNAME_:staff" "$HOMEDIR"
+sudo chown "${USERNAME_}:staff" "$HOMEDIR"
 
 echo "User '$USERNAME_' created with UID $UID_USE and home $HOMEDIR"
 
