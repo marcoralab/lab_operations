@@ -33,7 +33,7 @@ fi
 echo "Using UID $UID_USE for user '$USERNAME_'"
 
 # Create the user
-sudo sysadminctl -addUser "$USERNAME_" \
+sysadminctl -addUser "$USERNAME_" \
     -fullName "$FULLNAME" \
     -UID "$UID_USE" \
     -shell "$SHELL" \
@@ -41,21 +41,21 @@ sudo sysadminctl -addUser "$USERNAME_" \
     -password "$PASSWORD"
 
 # Create and set ownership of the home directory
-sudo mkdir -p "$HOMEDIR"
-sudo chown "${USERNAME_}:staff" "$HOMEDIR"
+mkdir -p "$HOMEDIR"
+chown "${USERNAME_}:staff" "$HOMEDIR"
 
 echo "User '$USERNAME_' created with UID $UID_USE and home $HOMEDIR"
 
-sudo dseditgroup -o edit -a "$USERNAME_" -t user admin
+dseditgroup -o edit -a "$USERNAME_" -t user admin
 cd $HOMEDIR
 sudo -u "$USERNAME_" /bin/bash -ic "HOME=$HOMEDIR $(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 cd -
-sudo dseditgroup -o edit -d "$USERNAME_" -t user admin
+dseditgroup -o edit -d "$USERNAME_" -t user admin
 
 # Hide user from login screen (redundant with UID < 500, but for safety)
-sudo defaults write /Library/Preferences/com.apple.loginwindow HiddenUsersList -array-add "$USERNAME_"
-sudo dscl . -create "/Users/$USERNAME_" IsHidden 1
-sudo dscl . -create "/Users/$USERNAME_" UserShell /usr/bin/false
+defaults write /Library/Preferences/com.apple.loginwindow HiddenUsersList -array-add "$USERNAME_"
+dscl . -create "/Users/$USERNAME_" IsHidden 1
+dscl . -create "/Users/$USERNAME_" UserShell /usr/bin/false
 if grep -q "^DenyUsers" /etc/ssh/sshd_config; then
   echo "Please add $USERNAME_ to the DenyUsers option in /etc/ssh/sshd_config"
 else
@@ -64,7 +64,7 @@ else
   sudo launchctl start com.openssh.sshd
 fi
 
-sudo mv /usr/local/bin/brew /usr/local/bin/brewdo
+sudo mv /opt/homebrew/bin/brew /opt/homebrew/bin/brewdo
 cat << 'EOF' | sudo tee -a /usr/local/bin/brew > /dev/null
 #!/bin/zsh
 if [[ "$USER" != "hb" ]]; then
@@ -78,4 +78,4 @@ else
     brewdo "$@"
 fi
 EOF
-sudo chmod +x /usr/local/bin/brew
+sudo chmod +x /opt/homebrew/bin/brew
