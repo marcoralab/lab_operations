@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 set -euo pipefail # STRICT MODE
-pyversion="3.11"
-rversion="4.4"
+pyversion="3.13"
+rversion="4.5"
 
 export MAMBA_NO_BANNER=1
 windows=0
@@ -106,9 +106,11 @@ if echo $HOME | grep -q "^/hpc/users/"; then
 
   if ! conda env list | grep -qE "^py$pyversion\s+"; then
     echo Installing py$pyversion environment
-    mamba create -y -n py$pyversion python=$pyversion snakemake=7.32.4 ipython ipdb \
+    mamba create -y -n py$pyversion python=$pyversion snakemake ipython ipdb \
       jupyterlab biopython visidata miller flippyr gh git vim pygit2 tmux \
       htop powerline-status click cookiecutter squashfs-tools radian \
+      snakemake-executor-plugin-lsf snakemake-storage-plugin-http \
+      snakemake-storage-plugin-ftp \
       r-base=$rversion r-essentials r-languageserver tqdm # r-httpgd
   fi
 
@@ -206,14 +208,14 @@ rm setup_lab.py
 if [[ $minerva -eq 1 ]]; then
   if ! grep -q singularity $SHELLCONF; then
     echo "Adding Singularity to $shelltype configuration ($SHELLCONF)"
-    echo "ml apptainer/1.2.5 2> /dev/null" >> $SHELLCONF
+    echo "ml apptainer/1.3.6 2> /dev/null" >> $SHELLCONF
   fi
   if ! grep -q singularity ~/.bashrc; then
     echo "Adding Singularity to .bashrc"
-    echo "ml apptainer/1.2.5 2> /dev/null" >> ~/.bashrc
+    echo "ml apptainer/1.3.6 2> /dev/null" >> ~/.bashrc
   fi
   ml -q singularity singularity-ce &>/dev/null && ml -singularity -singularity-ce
-  ml apptainer/1.2.5
+  ml apptainer/1.3.6
   
   set +u +e +o pipefail
   sycloud_added=false
